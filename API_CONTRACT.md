@@ -14,6 +14,9 @@
 Полные исходные захваты доступны локально по ссылкам ниже в игнорируемом `data/reports/`;
 после клонирования репозитория эта папка отсутствует.
 Примеры загрузки одиночного диалога сняты с отдельной SQLite, чтобы не менять 65 DEV-записей.
+Актуальные правила источников и связь UI с API описаны ниже; исторические захваты
+сохранены. Проверки изоляции источников используют синтетические записи и временную
+SQLite в `tests/test_upload_sources.py`, без обращения к модели.
 
 ## Подключение и типы
 
@@ -23,6 +26,8 @@
 - CORS: `CORS_ORIGINS` через запятую, по умолчанию `*`, без credentials.
 - API-ключ модели хранится только в `.env` бэкенда, фронтенду не передаётся.
 - ID — строки. `language`: `RU|KZ|EN`; `output_language`: `ru|kk|en`, по умолчанию `ru`.
+- `dataset_group_id`: строка источника (`DEV`, группа контроля, `UPLOAD`) либо null
+  у старой записи без группы. Это отдельное поле списка и карточки диалога.
 - `prompt_hash`: SHA-256 байтов файла evaluator_system.md, 64 шестнадцатеричных символа либо null у старых записей.
 - `channel`: произвольная строка 1–80 символов, не состоящая только из пробелов;
   `speaker`: `client|operator|bot|system`.
@@ -42,7 +47,7 @@
 | GET `/api/health` | — | 200: status, database |
 | POST `/api/dataset/load` | `{group_id?}` | 200: dataset_group_id,total,inserted,updated,unchanged,warnings |
 | POST `/api/conversations/upload` | JSON: conversation_id?,channel?,language?,transcript,audio_url?; либо text/plain + query | 201: conversation_id,import_result,conversation |
-| GET `/api/conversations` | language?,channel?,status?,q? | 200: массив карточек списка |
+| GET `/api/conversations` | language?,channel?,status?,q?,dataset_group_id? | 200: массив карточек списка |
 | GET `/api/conversations/{id}` | — | 200: транскрипт,revision,audio_url,latest_result |
 | GET `/api/conversations/{id}/evaluations` | — | 200: история, новые оценки первыми |
 | GET `/api/checklists` | — | 200: массив полных версий |
@@ -51,7 +56,7 @@
 | POST `/api/checklists/{id}/activate` | — | 200: выбранная версия |
 | POST `/api/evaluations` | conversation_id,checklist_version_id?,output_language? | 201: полная оценка; при сбое HTTP error |
 | POST `/api/evaluate` | тот же запрос | Устаревший alias реального /api/evaluations |
-| POST `/api/evaluations/batch` | conversation_ids ИЛИ all:true; checklist_version_id?,output_language?,force?,criterion_ids? | 202: job_id и начальное состояние |
+| POST `/api/evaluations/batch` | conversation_ids ИЛИ all:true; dataset_group_id? только при all:true; checklist_version_id?,output_language?,force?,criterion_ids? | 202: job_id и начальное состояние |
 | GET `/api/jobs/{id}` | — | 200: status,done,total,errors,error_count,skipped,items,request |
 | GET `/api/evaluations/{id}` | — | 200: original,final,criteria,sections,total,gross_violation,usage,decisions |
 | GET `/api/stats/cost` | — | 200: evaluations,total,average_per_evaluation,evaluation_count |
@@ -65,6 +70,34 @@
 последней оценке: `not_evaluated|pending|running|completed|needs_review|failed`.
 Карточка списка включает `total`, `gross_violation`, `has_appeal`, `has_open_appeal`,
 `evaluation_stale`. Последнее означает, что транскрипт обновлён после оценки.
+`dataset_group_id` фильтрует источник по точному совпадению; без фильтра список
+включает все источники. Пустая/пробельная группа возвращает 422, неизвестная — пустой массив.
+
+## Связь интерфейса с REST API
+
+Обзор получает `GET /api/conversations`, `GET /api/appeals` и `GET /api/stats/cost`.
+Из этих ответов UI вычисляет счётчики статусов, среднее/медиану, распределение баллов
+и разрезы по языкам и каналам. Среднее, медиана и распределение используют только
+последние `completed`-оценки с непустым итогом и `evaluation_stale=false`.
+Это снимок всей БД, включая UPLOAD; расходы показываются по всем сохранённым
+LLM-вызовам, включая повторы и апелляции. Отдельного `/api/stats/overview` нет.
+Дневной тренд и сравнение периодов не строятся из `conversations.updated_at`:
+это время изменения исходного диалога, а не время его оценки.
+
+В проверенных 65 DEV-записях нет стабильного ID оператора: исходная запись содержит
+только `conversation_id`, `channel`, `language`, `transcript`, `audio_url`.
+Роль `speaker=operator` не является идентификатором сотрудника. Маршрутов операторов
+нет; интерфейс показывает отсутствие данных, не создаёт профили из имён в репликах.
+
+Файловый импорт UI принимает массив записей, `{records:[...]}` и прежнюю оболочку
+фронтенда `{conversations:[...]}`. Одиночную запись оберните в массив;
+из официального ответа с `data.records` передайте `{records:[...]}`.
+Это форматы **адаптера интерфейса**; REST `/api/conversations/upload` по-прежнему
+принимает один диалог. Адаптер отправляет записи последовательно, показывает
+успех/ошибку каждой и продолжает после ошибки отдельной записи. Успешные записи
+уже сохранены, общей транзакции на весь файл нет. Импорт через UI всегда создаёт
+источник UPLOAD; поле `dataset_group_id=DEV` в файле не даёт права перезаписать DEV.
+Официальный набор загружается через `/api/dataset/load` или `scripts/load_dataset.py`.
 
 ## Примеры по фактической структуре: health и загрузка
 
@@ -171,6 +204,26 @@ HTTP 201. Фрагмент структуры ответа: числа факт�
 Тело — по одной строке `role: text`; допустимы четыре указанные роли. ID генерируется,
 если не передан. Загрузка изменённой записи повышает revision; старые оценки сохраняют
 свой snapshot. Превышение `MAX_DATASET_BYTES` даёт 413 до разбора JSON, без обрезки.
+
+Источник пользовательской загрузки всегда `UPLOAD`. Повторный ID можно обновить
+только внутри UPLOAD. Если ID уже принадлежит DEV, контролю либо записи без группы,
+запрос возвращает HTTP 409; исходные реплики, группа, revision и оценки сохраняются.
+Проверка конфликта и запись выполняются в одной транзакции.
+
+Форма ответа, проверенная на синтетической записи с конфликтующим ID:
+
+```json
+{
+  "error": {
+    "code": "UPLOAD_ID_CONFLICT",
+    "message": "Этот conversation_id уже принадлежит другому набору. Исходный диалог не изменён; используйте другой ID для загрузки."
+  }
+}
+```
+
+Фильтры примеров: `GET /api/conversations?dataset_group_id=DEV` и
+`GET /api/conversations?dataset_group_id=UPLOAD`. Официальный экспорт выбирает
+именно группу набора; UPLOAD не попадает в DEV/PROD `results.json`.
 
 ## Оценка и её отображение
 
@@ -320,6 +373,18 @@ HTTP 200. Структура ответа (тексты синтетически
 Полная запись: [запрос и ответ](data/reports/stage34-20261107/conversations_filtered.json).
 
 ## Batch, прогресс и перезапуск
+
+Выбор фиксируется при создании задачи:
+
+- `{"all":true}` — все находящиеся в БД диалоги, кроме источника UPLOAD.
+- `{"all":true,"dataset_group_id":"DEV"}` — только DEV; группа выбирается точно.
+- `{"all":true,"dataset_group_id":"UPLOAD"}` — явная оценка пользовательских загрузок.
+- `{"conversation_ids":["synthetic-user-id"]}` — явный список ID; UPLOAD разрешён.
+
+`dataset_group_id` допускается только с `all:true`: сочетание с `conversation_ids`
+возвращает 422, чтобы фильтр не был молча проигнорирован. Неизвестная группа создаёт
+пустую задачу с total=0, которая завершится без вызова модели. Параметр `force`
+не меняет выбранный источник. В старых примерах ниже список ID остаётся явным.
 
 `force` по умолчанию false. Готовая оценка пары (conversation_id, checklist_version_id)
 для текущей revision пропускается. `done` включает completed, skipped, failed.
@@ -857,6 +922,7 @@ HTTP 200. Фрагмент структуры ответа: числа факт�
 | --- | --- | --- |
 | 404 | CONVERSATION_NOT_FOUND,EVALUATION_NOT_FOUND,CHECKLIST_NOT_FOUND,JOB_NOT_FOUND,APPEAL_NOT_FOUND,CRITERION_NOT_FOUND | Нет записи |
 | 409 | APPEAL_ALREADY_OPEN,APPEAL_ALREADY_REVIEWED,CRITERION_NOT_REVIEWABLE | Конфликт состояния |
+| 409 | UPLOAD_ID_CONFLICT | ID пользовательской загрузки занят другим источником; запись не изменена |
 | 413 | UPLOAD_TOO_LARGE,DATASET_TOO_LARGE,MODEL_INPUT_TOO_LARGE,APPEAL_INPUT_TOO_LARGE | Превышен лимит; обрезки нет |
 | 422 | VALIDATION_ERROR,CHECKLIST_INVALID,INVALID_TRANSCRIPT_TEXT,INVALID_FINAL_ANSWER,INVALID_DECISION,INVALID_CRITERION_IDS,NO_OPERATOR_MESSAGES | Недопустимые поля/значение либо недостаточно данных об операторе |
 | 429 | MODEL_RATE_LIMITED | Лимит провайдера после ограниченных повторов |

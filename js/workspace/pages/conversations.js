@@ -1,10 +1,11 @@
 // Conversations: список диалогов (поиск, фильтры, сортировка, пагинация, импорт) и карточка диалога
 // (транскрипт + AI-оценка, evidence navigation по стабильному message_id, аудио только при наличии audio_url).
 import { t, applyDom } from '../../../src/i18n/index.js';
-import { getMode, getApiBase, setMode, isAbort, getConversations, getConversation, getChecklists, getEvaluation, runEvaluation, importConversations, assignOperator, getOperators, getAppeals } from '../../api.js';
+import { getMode, getApiBase, setMode, isAbort, getConversations, getConversation, getChecklists, getEvaluation, runEvaluation, importConversations, getImportRecords, assignOperator, getOperators, getAppeals } from '../../api.js';
 import { esc, icon, num, tr, loc, chip, langTag, opCell, statusBadge, scoreIndicator, grossBadge, dateTime, criteriaCard, errorState, errorText, emptyState, mockBanner } from '../ui.js';
 import { mountList } from '../listPage.js';
 import { openModal, toast } from '../overlay.js';
+import { usageSummary } from './usage.js';
 
 const LANG_OPTS = [['', 'ws.f.all'], ['ru', 'ws.lang.ru'], ['kk', 'ws.lang.kk'], ['en', 'ws.lang.en']];
 const channelCell = (c) => `<span class="chan">${icon(c === 'call' ? 'headset' : 'chat')}${esc(tr(`ws.channel.${c}`, c))}</span>`;
@@ -12,6 +13,12 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ======================= список =======================
 export function mountConversations(root, ctx) {
+  const knownChannels = new Set();
+  const channelOptions = (data, selected) => {
+    (data?.meta?.available_channels || []).forEach((value) => knownChannels.add(value));
+    if (selected) knownChannels.add(selected);
+    return [['', 'ws.f.all'], ...[...knownChannels].sort().map((value) => [value, ['chat', 'call'].includes(value) ? `ws.channel.${value}` : value])];
+  };
   return mountList(root, ctx, {
     titleKey: 'ws.nav.conversations', searchKey: 'ws.conv.search', sort: { key: 'started_at', order: 'desc' },
     fetch: getConversations,
@@ -19,15 +26,15 @@ export function mountConversations(root, ctx) {
     emptyKeys: { title: 'ws.conv.emptyTitle', text: 'ws.conv.emptyText' },
     filters: [
       { name: 'language', labelKey: 'ws.f.language', options: LANG_OPTS },
-      { name: 'channel', labelKey: 'ws.f.channel', options: [['', 'ws.f.all'], ['chat', 'ws.channel.chat'], ['call', 'ws.channel.call']] },
-      { name: 'status', labelKey: 'ws.f.status', options: [['', 'ws.f.all'], ...['new', 'evaluating', 'evaluated', 'appealed', 'reviewed', 'failed'].map((s) => [s, `ws.status.conv.${s}`])] },
-      { name: 'operator_id', labelKey: 'ws.f.operator', options: [['', 'ws.f.all'], ['none', 'ws.unassigned']] },
+      { name: 'channel', labelKey: 'ws.f.channel', options: getMode() === 'api' ? channelOptions : [['', 'ws.f.all'], ['chat', 'ws.channel.chat'], ['call', 'ws.channel.call']] },
+      { name: 'status', labelKey: 'ws.f.status', options: [['', 'ws.f.all'], ...['new', 'evaluating', 'evaluated', 'needs_review', 'appealed', 'reviewed', 'failed'].map((s) => [s, `ws.status.conv.${s}`])] },
+      ...(getMode() === 'api' ? [] : [{ name: 'operator_id', labelKey: 'ws.f.operator', options: [['', 'ws.f.all'], ['none', 'ws.unassigned']] }]),
     ],
     columns: () => [
       { label: t('ws.col.id'), sortKey: 'id', render: (c) => `<a class="row__id" href="#/dashboard/conversations/${encodeURIComponent(c.id)}">${esc(c.id)}</a>` },
       { label: t('ws.col.language'), render: (c) => langTag(c.language) },
       { label: t('ws.col.channel'), render: (c) => channelCell(c.channel) },
-      { label: t('ws.col.operator'), render: (c) => opCell(c.operator_id) },
+      { label: t('ws.col.operator'), render: (c) => getMode() === 'api' ? `<em class="muted">${esc(t('ws.contract.operatorMissing'))}</em>` : opCell(c.operator_id) },
       { label: t('ws.col.status'), render: (c) => statusBadge('conv', c.status) },
       { label: t('ws.col.score'), sortKey: 'score', render: (c) => scoreIndicator(c.score) },
       { label: t('ws.col.gross'), render: (c) => (c.gross_violation ? grossBadge() : '<span class="muted">—</span>') },
@@ -42,12 +49,14 @@ export function mountConversations(root, ctx) {
   });
 }
 
-// Импорт набора диалогов. Endpoint POST /conversations/import НЕ согласован с Backend (предложение, см. docs/api-contract.md).
+// Real adapter validates each record and POSTs it to /api/conversations/upload.
 function openImport(reload) {
-  const sample = '[{"language":"ru","channel":"chat","messages":[{"role":"client","text":"…"},{"role":"operator","text":"…"}]}]';
+  const sample = getMode() === 'api'
+    ? '{"records":[{"conversation_id":"upload-example","language":"RU","channel":"agent chat","audio_url":null,"transcript":[{"timestamp":"00:01","speaker":"client","text":"…"}]}]}'
+    : '[{"language":"ru","channel":"chat","messages":[{"role":"client","text":"…"},{"role":"operator","text":"…"}]}]';
   const m = openModal({
     title: t('ws.conv.importTitle'), wide: true,
-    body: `<p class="modal__text">${esc(t('ws.conv.importText'))}</p><pre class="code">${esc(sample)}</pre>
+    body: `<p class="modal__text">${esc(t(getMode() === 'api' ? 'ws.contract.importText' : 'ws.conv.importText'))}</p><pre class="code">${esc(sample)}</pre>
       <label class="field"><span>${esc(t('ws.conv.importFile'))}</span><input type="file" accept="application/json,.json" data-file></label>
       <p class="form-hint" data-info></p><div data-result></div>`,
     actions: `<button class="btn btn--ghost" type="button" data-modal-close>${esc(t('ws.common.cancel'))}</button><button class="btn" type="button" data-run disabled>${esc(t('ws.conv.importRun'))}</button>`,
@@ -61,33 +70,33 @@ function openImport(reload) {
     if (!f) return;
     try {
       const j = JSON.parse(await f.text());
-      const arr = Array.isArray(j) ? j : j?.conversations;
+      const arr = getImportRecords(j);
       if (!Array.isArray(arr) || !arr.length) throw new Error('shape');
       payload = { conversations: arr };
       $('[data-info]').textContent = t('ws.conv.importReady', { n: num(arr.length) });
       $('[data-run]').disabled = false;
     } catch {
       $('[data-info]').textContent = '';
-      $('[data-result]').innerHTML = `<p class="form-error" role="alert">${esc(t('ws.conv.importBadFile'))}</p>`;
+      $('[data-result]').innerHTML = `<p class="form-error" role="alert">${esc(t('ws.contract.importBadFile'))}</p>`;
     }
   });
   $('[data-run]').addEventListener('click', async () => {
     if (!payload || busy) return;
-    busy = true; $('[data-run]').disabled = true; $('[data-run]').textContent = t('ws.state.loading');
+    busy = true; $('[data-file]').disabled = true; $('[data-run]').disabled = true; $('[data-run]').textContent = t('ws.state.loading');
     try {
       const r = await importConversations(payload);
-      const errs = (r.errors || []).slice(0, 8).map((x) => `<li>#${num(x.index + 1)}: ${esc(x.error)}</li>`).join('');
-      $('[data-result]').innerHTML = `<p class="form-ok" role="status">${esc(t('ws.conv.importDone', { n: num(r.imported), s: num(r.skipped) }))}</p>${errs ? `<ul class="form-errs">${errs}</ul>` : ''}`;
+      const results = r.results || (r.errors || []).map((x) => ({ ...x, status: 'rejected' }));
+      const rows = results.map((x) => `<tr><td>${esc(num(x.index + 1))}</td><td>${esc(x.conversation_id ?? '—')}</td><td>${esc(t(x.status === 'accepted' ? 'ws.contract.accepted' : 'ws.contract.rejected'))}</td><td>${esc(x.error || '')}</td></tr>`).join('');
+      $('[data-result]').innerHTML = `<p class="form-ok" role="status">${esc(t('ws.contract.importDone', { n: num(r.imported), s: num(r.skipped) }))}</p>${rows ? `<div class="dt-wrap"><table class="dt"><thead><tr><th>#</th><th>conversation_id</th><th>${esc(t('ws.col.status'))}</th><th>${esc(t('ws.contract.reason'))}</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}`;
       if (r.imported) { toast(t('ws.conv.importDone', { n: num(r.imported), s: num(r.skipped) })); reload(); }
     } catch (e) {
       $('[data-result]').innerHTML = `<p class="form-error" role="alert">${esc(e.kind === 'http' ? `${t('ws.conv.importFail')} (${e.detail || e.status})` : errorText(e, getApiBase()))}</p>`;
     }
-    busy = false; $('[data-run]').textContent = t('ws.conv.importRun'); $('[data-run]').disabled = false;
+    busy = false; $('[data-file]').disabled = false; $('[data-run]').textContent = t('ws.conv.importRun'); $('[data-run]').disabled = false;
   });
 }
 
 // ======================= карточка диалога =======================
-const hhmmss = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '' : [d.getHours(), d.getMinutes(), d.getSeconds()].map((x) => String(x).padStart(2, '0')).join(':'); };
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 export function mountConversation(root, ctx) {
@@ -110,7 +119,7 @@ export function mountConversation(root, ctx) {
     ac.abort(); ac = new AbortController();
     head.innerHTML = ''; trPane.innerHTML = `<i class="skel skel--table"></i>`; evPane.innerHTML = `<i class="skel skel--chart"></i>`;
     try {
-      const [c, cl] = await Promise.all([getConversation(id, { signal: sig() }), getChecklists({ signal: sig() }).catch((e) => { if (isAbort(e)) throw e; return { items: [] }; })]);
+      const [c, cl] = await Promise.all([getConversation(id, { signal: sig() }), getChecklists({ signal: sig() }).catch((e) => { if (isAbort(e) || getMode() === 'api') throw e; return { items: [] }; })]);
       conv = c; checklists = cl.items || []; err = null;
     } catch (e) {
       if (isAbort(e)) return;
@@ -130,14 +139,13 @@ export function mountConversation(root, ctx) {
 
   async function loadEval(eid, rerender = true) {
     evId = eid; evErr = null;
-    try { ev = await getEvaluation(eid, { signal: sig() }); } catch (e) { if (isAbort(e)) return; ev = null; evErr = e; }
-    await loadAppeals();
+    try { ev = await getEvaluation(eid, { signal: sig() }); await loadAppeals(); } catch (e) { if (isAbort(e)) return; ev = null; evErr = e; }
     if (rerender) renderEval();
     if (ev?.status === 'running') schedulePoll();
   }
 
   async function loadAppeals() {
-    try { appeals = (await getAppeals({ conversation_id: id, page_size: 100 }, { signal: sig() })).items || []; } catch (e) { if (isAbort(e)) return; appeals = []; }   // без списка апелляций кнопка остаётся доступной, дубликат отклонит Backend
+    try { appeals = (await getAppeals({ conversation_id: id, page_size: 100 }, { signal: sig() })).items || []; } catch (e) { if (isAbort(e) || getMode() === 'api') throw e; appeals = []; }
   }
 
   function schedulePoll(tries = 0) {
@@ -174,7 +182,7 @@ export function mountConversation(root, ctx) {
     head.innerHTML = `<div class="cd__head"><div class="cd__id"><h2>${esc(conv.id)}</h2>${statusBadge('conv', conv.status)}${conv.gross_violation ? grossBadge() : ''}</div>
       <dl class="cd__meta"><div><dt>${esc(t('ws.col.language'))}</dt><dd>${langTag(conv.language)} ${esc(tr(`ws.lang.${conv.language}`, conv.language))}</dd></div>
       <div><dt>${esc(t('ws.col.channel'))}</dt><dd>${channelCell(conv.channel)}</dd></div>
-      <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${opCell(conv.operator_id)} <button class="btn btn--ghost btn--sm" type="button" data-act="assign">${esc(t(conv.operator_id ? 'ws.conv.reassign' : 'ws.conv.assign'))}</button></dd></div>
+      <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${getMode() === 'api' ? esc(t('ws.contract.operatorMissing')) : `${opCell(conv.operator_id)} <button class="btn btn--ghost btn--sm" type="button" data-act="assign">${esc(t(conv.operator_id ? 'ws.conv.reassign' : 'ws.conv.assign'))}</button>`}</dd></div>
       <div><dt>${esc(t('ws.col.date'))}</dt><dd>${esc(dateTime(conv.started_at))}</dd></div>
       <div><dt>${esc(t('ws.col.score'))}</dt><dd>${scoreIndicator(conv.score)}</dd></div></dl></div>`;
   }
@@ -184,7 +192,7 @@ export function mountConversation(root, ctx) {
       ? (conv.audio_url ? `<figure class="audio-box"><figcaption>${esc(t('ws.conv.recording'))}</figcaption><audio controls preload="none" src="${esc(conv.audio_url)}"></audio></figure>`
         : `<p class="audio-none">${icon('headset')}${esc(t('ws.conv.noAudio'))}</p>`) : '';
     const rows = (conv.messages || []).map((m) => `<li class="msg msg--${esc(m.role)}" data-mid="${esc(m.id)}"><div class="msg__meta"><span class="msg__role">${esc(tr(`ws.role.${m.role}`, m.role))}</span>
-      ${m.ts || m.offset_sec != null ? `<time${m.ts ? ` datetime="${esc(m.ts)}" title="${esc(m.ts)}"` : ''}>${esc([m.ts ? hhmmss(m.ts) : '', m.offset_sec != null ? mmss(m.offset_sec) : ''].filter(Boolean).join(' · '))}</time>` : ''}<span class="msg__id">#${esc(m.id)}</span></div>
+      ${m.ts || m.offset_sec != null ? `<time${m.ts ? ` datetime="${esc(m.ts)}" title="${esc(m.ts)}"` : ''}>${esc([m.ts || '', m.offset_sec != null ? mmss(m.offset_sec) : ''].filter(Boolean).join(' · '))}</time>` : ''}<span class="msg__id">#${esc(m.id)}</span></div>
       <p class="msg__text" lang="${esc(conv.language)}">${esc(m.text)}</p></li>`).join('');
     trPane.innerHTML = `<header class="pane__head"><h3>${esc(t('ws.conv.transcript'))}</h3><span class="muted">${esc(t('ws.conv.msgCount', { n: num(conv.messages?.length || 0) }))}</span></header>
       ${audio}<div data-warn>${evidenceWarn ? `<p class="banner banner--warn" role="alert">${icon('alert')}<span>${esc(evidenceWarn)}</span></p>` : ''}</div>
@@ -205,18 +213,18 @@ export function mountConversation(root, ctx) {
       <button class="btn" type="button" data-act="run" ${free.length && !running ? '' : 'disabled'}>${esc(running ? t('ws.eval.running') : t(evs.length ? 'ws.eval.runAnother' : 'ws.eval.run'))}</button></div>
       ${!free.length ? `<p class="form-hint">${esc(t('ws.eval.noFree'))}</p>` : ''}`;
     let inner = '';
-    if (evErr) inner = `<div class="state state--error" role="alert">${icon('alert', 'ico--lg')}<h3>${esc(t('ws.eval.failTitle'))}</h3><p>${esc(errorText(evErr, getApiBase()))}</p>${evErr.detail ? `<p class="state__detail">${esc(evErr.detail)}</p>` : ''}</div>`;
+    if (evErr) inner = `<div class="state state--error" role="alert">${icon('alert', 'ico--lg')}<h3>${esc(t('ws.eval.failTitle'))}</h3><p>${esc(errorText(evErr, getApiBase()))}</p></div>`;
     else if (!ev) inner = `<div class="state state--empty">${icon('sparkle', 'ico--lg')}<h3>${esc(t('ws.eval.noneTitle'))}</h3><p>${esc(t('ws.eval.noneText'))}</p></div>`;
     else if (ev.status === 'running') inner = `<div class="state state--run" aria-busy="true"><span class="spin" aria-hidden="true"></span><h3>${esc(t('ws.eval.runningTitle'))}</h3><p>${esc(t('ws.eval.runningText'))}</p></div>`;
     else if (ev.status === 'failed') inner = `<div class="state state--error" role="alert">${icon('alert', 'ico--lg')}<h3>${esc(t('ws.eval.failTitle'))}</h3><p>${esc(ev.error?.message || t('ws.state.aiDown'))}</p></div>`;
     else {
       const changed = ev.final_total_score != null && ev.final_total_score !== ev.total_score;
       inner = `<div class="evp__total"><div><span class="muted">${esc(t('ws.eval.total'))}</span>${scoreIndicator(ev.total_score)}${changed ? `<span class="evp__final">${esc(t('ws.eval.afterAppeals'))}: <b>${esc(num(ev.final_total_score))}</b></span>` : ''}</div>
-        <div class="evp__flag evp__flag--${ev.gross_violation ? 'bad' : 'ok'}">${ev.gross_violation ? `${icon('alert')}${esc(t('ws.gross.found'))}` : `${icon('check-circle')}${esc(t('ws.gross.none'))}`}</div></div>
+        <div class="evp__flag evp__flag--${ev.gross_violation ? 'bad' : 'ok'}">${ev.gross_violation == null ? esc(t('ws.contract.unknown')) : ev.gross_violation ? `${icon('alert')}${esc(t('ws.gross.found'))}` : `${icon('check-circle')}${esc(t('ws.gross.none'))}`}</div></div>
         <p class="form-hint">${esc(t('ws.eval.fromBackend'))} · ${esc(t('ws.eval.versionN', { n: num(ev.checklist_version) }))}${ev.source === 'mock' ? ` · ${esc(t('ws.mock.short'))}` : ''}</p>
         <div class="crit-list">${(ev.criteria || []).map((c) => criteriaCard(c, { conversationId: conv.id, appeal: true, appealed: appealedSet(), showScore: true })).join('')}</div>`;
     }
-    evPane.innerHTML = `<header class="pane__head"><h3>${icon('sparkle')}${esc(t('ws.eval.title'))}</h3>${sel}</header>${runBox}${inner}`;
+    evPane.innerHTML = `<header class="pane__head"><h3>${icon('sparkle')}${esc(t('ws.eval.title'))}</h3>${sel}</header>${runBox}${inner}${usageSummary(ev?.usage)}`;
   }
 
   // ---------- evidence navigation ----------
@@ -292,9 +300,9 @@ export function mountConversation(root, ctx) {
   }
 
   async function openAppeal(criterionId) {
-    if (!ev || ev.status !== 'done') return;
+    if (!ev || !['done', 'needs_review'].includes(ev.status)) return;
     const { openAppealForm } = await import('../appealForm.js');
-    openAppealForm({ evaluation: ev, criterionId, onDone: async () => { await loadAppeals(); conv.status = 'appealed'; renderHead(); renderEval(); } });
+    openAppealForm({ evaluation: ev, criterionId, onDone: async () => { await load(); } });
   }
 
   function onClick(e) {

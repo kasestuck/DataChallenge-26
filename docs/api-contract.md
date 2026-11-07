@@ -1,85 +1,165 @@
 # CQA Insight — контракт Frontend ⇄ Backend
 
-> **Источник истины — OpenAPI Backend** (`docs/backend-openapi.json`, снят с запущенного Backend v0.4.0, ветка `BACK`, коммит `2945be5`)
-> и `API_CONTRACT.md` из ветки `BACK`. Ниже — как Frontend использует реальные маршруты и что не совпало с первоначальным
-> предложением Frontend (оно сохранено в приложении в конце файла как описание **внутреннего view-model** UI).
+Действующие источники: [API_CONTRACT.md](../API_CONTRACT.md), `backend/main.py` и
+`/openapi.json` запущенного приложения. `docs/backend-openapi.json` — исторический
+снимок, а не гарантия актуальной схемы. Ниже описан текущий `js/realApiAdapter.js`.
+В конце сохранён отдельный архив демонстрационного view-model; его endpoints
+не являются текущими маршрутами REST API.
 
-## 1. Подключение
+## Подключение и ошибки
 
-| | |
+| Параметр | Текущий контракт |
 |---|---|
-| Base URL по умолчанию | `http://localhost:8001/api` (`js/config.js`; переопределение: `window.CQA_API_BASE` или `localStorage['cqa-api-base']`) |
-| Расхождение с ТЗ | В задании фигурировал `/api/v1`. Реальный Backend отдаёт маршруты под `/api` (без `/v1`) — используем реальные. |
-| Формат | JSON, `Content-Type: application/json`; CORS на Backend по умолчанию `*`. |
-| Ошибки | `{"error":{"code","message"}}` → `ApiError{kind:'http', status, code, detail}`; FastAPI `{"detail"}` тоже разбирается. |
-| Секреты | Ключ Meta AI — только в `.env` Backend. Во Frontend ключей нет (проверено поиском по коду). |
-| Таймауты | 12 с обычные запросы; 180 с для `POST /evaluations` (синхронный вызов модели). Отмена — `AbortController`. |
+| Base URL | `${location.origin}/api` для HTTP(S); единому запуску не нужны настройки в консоли |
+| Явный override | `window.CQA_API_BASE`, затем сохранённый `cqa-api-base`; только для другого адреса API |
+| Маршруты | `/api`, без `/v1` |
+| Вход | Demo Auth и переключатель «Демо» → «API» в шапке; Demo Auth не защищает REST API |
+| Ошибки | `{"error":{"code","message"}}` → `ApiError{kind,status,code,detail}`; сохраняются код и сообщение бэкенда |
+| Таймаут | 12 секунд обычные запросы, 180 секунд синхронная оценка; отмена через `AbortController` |
+| Ключ | `MODEL_API_KEY` только на бэкенде, в браузер не передаётся |
+| Режим API | Сбой остаётся ошибкой: нет подмены mock-результатом, нулём или выдуманным счётчиком |
 
-## 2. Используемые endpoints и статус проверки
+## Реальные запросы экранов
 
-«Live» — проверено автотестом `tests/adapters.html?live=1` на реально запущенном Backend (без ключа модели).
-«По контракту» — реализовано по `API_CONTRACT.md`/OpenAPI, **на живом Backend не проверено** (нужен ключ Meta AI).
+Пути ниже указаны относительно `/api`. Это карта реализации, не перечень выполненных
+в текущем прогоне вызовов модели. Результаты проверок вынесены в [testing.md](testing.md).
 
-| Endpoint | Функция Frontend | Статус |
-|---|---|---|
-| `GET /health` | `getHealth` | Live |
-| `POST /conversations/upload` | `importConversations` (по одному диалогу; `language` ru/kk/en → `RU/KZ/EN`, `channel` chat/call → `agent chat/voice call`) | Live |
-| `GET /conversations?language&channel&q` | `getConversations` (+ клиентские status/sort/пагинация) | Live |
-| `GET /conversations/{id}` | `getConversation` | Live |
-| `GET /conversations/{id}/evaluations` | `getConversation().evaluations` | Live (пустая история) |
-| `GET /checklists`, `GET /checklists/active` | `getChecklists` | Live |
-| `POST /checklists` | `saveChecklist` (создаёт НОВУЮ версию; прежние неизменны) | Live |
-| `POST /checklists/{id}/activate` | `activateChecklist` (в UI пока не вызывается) | По контракту |
-| `POST /evaluations` | `runEvaluation` (синхронно, `output_language` = язык UI) | По контракту |
-| `GET /evaluations/{id}` | `getEvaluation` | По контракту |
-| `POST /appeals`, `GET /appeals`, `GET /appeals/{id}` | `createAppeal`, `getAppeals`, `getAppeal` | По контракту (ошибки 404 — Live) |
-| `POST /appeals/{id}/decision` | `decideAppeal` (approved→`change`, rejected→`confirm`) | По контракту |
-| `POST /evaluations/batch`, `GET /jobs/{id}` | в UI не используются (переоценка — последовательные `POST /evaluations`) | — |
-| `POST /appeals/{id}/ai-suggest`, `GET /stats/cost`, `POST /dataset/load`, `POST /evaluate` | не используются | — |
+| Endpoint | Использование |
+|---|---|
+| `GET /health` | Проверка доступности |
+| `GET /conversations?language=&channel=&status=&q=&dataset_group_id=` | Список диалогов; адаптер дополняет фильтры, сортировку и пагинацию на клиенте |
+| `POST /conversations/upload` | Импорт по одной записи с индивидуальным результатом |
+| `GET /conversations/{id}` | Реплики, источник, последний результат |
+| `GET /conversations/{id}/evaluations` | История оценок в карточке диалога |
+| `GET /checklists`, `GET /checklists/active` | Версии и активный чек-лист |
+| `POST /checklists` | Новая неизменяемая версия; валидация конфигурации бэкендом |
+| `POST /checklists/{id}/activate` | Метод адаптера для активации версии |
+| `POST /evaluations` | Полная оценка одного диалога, синхронный ответ |
+| `GET /evaluations/{id}` | Полная карточка оценки, исходный/финальный результат и usage |
+| `GET /appeals`, `GET /appeals/{id}`, `POST /appeals` | Список, карточка и создание апелляции |
+| `POST /appeals/{id}/decision` | Решение `confirm/change` и `final_answer`; баллы считает бэкенд |
+| `GET /stats/cost` | Токены и стоимость в Overview |
+| `POST /evaluations/batch`, `GET /jobs/{id}` | Есть в API; batch/progress не подключены к кнопкам UI |
+| `POST /appeals/{id}/ai-suggest`, `POST /dataset/load` | Есть в API/Swagger; отдельные кнопки UI не подключены |
 
-## 3. Расхождения с первоначальным предложением Frontend (исправлено в адаптере)
+Отдельные endpoints `/overview`, `/operators`, `/conversations/import` и список
+`GET /evaluations` не используются и не требуются для текущих экранов.
 
-| Было в предложении | Реальный Backend | Что сделано |
-|---|---|---|
-| Списки `{items,total,page,page_size}`, сортировка/фильтры на сервере | Голые JSON-массивы, без пагинации; серверные фильтры только `language/channel/status/q` | Клиентская пагинация/сортировка в адаптере; в `meta.client_side_paging` пометка |
-| `ru/kk/en`, `chat/call` | `RU/KZ/EN`, `agent chat/voice call` | Преобразование в `LANG_*`/`CHANNEL_*` |
-| `id`, `role`, `messages[]` | `conversation_id`, `speaker`, `transcript[].message_id` | `mapMessage` (`message_id` не меняется) |
-| Баллы числами | Десятичные **строки** (`"92.31"`), `null` = нет достоверного итога | `num()`; `null` остаётся `null` (не 0) |
-| Статусы `new/evaluating/evaluated/appealed/reviewed/failed` | `not_evaluated/pending/running/completed/needs_review/failed` | `convStatus`; добавлен статус **needs_review** (оценка есть, итога нет) |
-| Оценка: `score`, `na{reason}`, `explanation` | `points`, `effective_weight`, `answer:"na"`, `reasoning`, `valid`, `decisions[]`, слои `original`/`final` | `mapCriterion`/`mapEvaluation`; исходный балл критерия берётся из `original`, итоговый — из `final` |
-| Асинхронный запуск оценки + polling | `POST /evaluations` синхронный (десятки секунд) | UI поддерживает оба варианта; для API — готовый результат из ответа и перезагрузка диалога |
-| Операторы, список оценок, Overview | **Нет таких endpoints** | `unsupported` (см. §5) |
-| Апелляция `pending/approved/rejected`, `new_score` | `open/reviewed`, решение `confirm|change` + `final_answer` (ответ, не балл) | В форме решения для API — выбор нового **ответа**; итоги считает Backend |
-| Чек-лист: `{min,max}` шкала, вес всех = 100 | `scale` — словарь `{"10":"описание",…}`, секции, `yes_text/no_text`; Backend НЕ требует сумму 100, а нормирует итог | `toChecklistRequest` сохраняет секции/тексты/шкалу из исходной версии; в редакторе проверка суммы 100 оставлена (строже Backend, намеренно) |
-| Ошибки `{detail}` | `{"error":{"code","message"}}` | `parseErrorBody` |
+Список диалогов возвращает `meta.available_channels` из фактических записей до
+выбранного фильтра канала. Для этого адаптер применяет канал локально, сохраняя
+серверные фильтры языка, текста и источника и один запрос списка. Произвольные
+каналы доступны в фильтре без заранее придуманного перечня.
 
-## 4. Правила целостности (проверено тестами)
+## Overview
 
-* Итоги (`total`, `original_total`, `final_total`) берутся только из ответов Backend; Frontend их не вычисляет.
-* Evidence (`message_id`, `quote`) отображаются как пришли; Frontend их не генерирует. Ссылка на несуществующий `message_id` показывает предупреждение и не подсвечивает чужую реплику.
-* Решение по апелляции не изменяет исходную оценку; итог после решения — из ответа Backend (`GET /appeals/{id}` после `POST …/decision`).
-* Сохранение чек-листа всегда создаёт новую версию; тест подтверждает неизменность прежней и отсутствие новой версии при `422`.
+`getOverview()` получает три реальных ответа: `/conversations`, `/appeals`, `/stats/cost`.
+Адаптер вычисляет агрегаты из этих данных, не пересчитывая официальные баллы диалогов:
 
-## 5. Чего Backend не предоставляет (Frontend не выдумывает)
+- `kpis.total_count`, `evaluated_count`, `needs_review_count`, `failed_count`,
+  `not_evaluated_count`, `running_count` — статусы последних результатов.
+- `scored_count`, `avg_score`, `median_score`, `score_distribution` — завершённые,
+  неустаревшие оценки с известным числовым итогом. Завершённый результат с `null`
+  не становится нулём. `stale_count` возвращается отдельно.
+- `gross_violations_count` — последние неустаревшие флаги `true`;
+  `pending_appeals_count` — апелляции со статусом `open`.
+- `by_language`, `by_channel` — количество всех диалогов; среднее использует тот же
+  набор допустимых итогов. Произвольные каналы сохраняют своё название.
+- `cost` — `stats.total` без выдумывания тарифов; охватывает все записанные вызовы,
+  в том числе повторы и апелляции. `cost:null` означает неизвестную стоимость.
+- `trend:[]`, `avg_score_delta:null`, `meta.period_supported:false`: текущий снимок
+  всей БД, без временного ряда и сравнения периодов.
 
-* **Операторы**: в диалогах нет `operator_id`/имени. Страницы «Операторы», карточка оператора и ручная привязка в режиме API показывают состояние «Backend не поддерживает» (`ApiError.kind = 'unsupported'`). Связи «оператор–диалог» не изобретаются.
-* **Список оценок**: в API режиме страница «Оценки» строится из `GET /conversations` (только диалоги с `evaluation_id`), помечено в `meta.derived_from`; `checklist_version` и `final_total_score` в списке неизвестны.
-* **Overview**: агрегатов нет — `unsupported`.
-* **Дата диалога**: есть `updated_at` (время загрузки), `started_at` нет → «—». У реплик без `timestamp`/`offset_sec` время не показывается.
-* **Заметка к версии чек-листа**: поля нет в `ChecklistRequest` — введённая заметка не сохраняется.
+Интервалы распределения: `[0,20)`, `[20,40)`, `[40,60)`, `[60,80)`, `[80,100]`.
+Средний балл — оценка качества диалогов по чек-листу, не точность AI относительно
+Ground Truth. Времена обновления диалогов не подменяют время их оценки.
 
-## 6. Вопросы к Backend
+## Импорт и разделение источников
 
-1. Нужны `operator_id`/имя в `ConversationResponse` и `GET /operators` (+ профиль, статистика по критериям).
-2. Серверная пагинация/сортировка и `GET /evaluations` (список оценок с фильтрами).
-3. Точная схема `GET /appeals/{id}` (в OpenAPI `object`): нужны `conversation_id`, `criterion_name`, `created_at`, итоги.
-4. Схема `GET /conversations/{id}/evaluations` и поле даты оценки (`created_at`).
-5. Нужен ли `started_at` у диалога.
-6. Аутентификация проверяющего (сейчас Demo Auth на Frontend — не защита).
+Адаптер принимает массив, `{"records":[...]}` или `{"conversations":[...]}`.
+Официальная запись: `conversation_id`, `language:RU|KZ|EN`, произвольный непустой
+`channel`, `audio_url:null|string`, `transcript:[{timestamp,speaker,text}]`.
+Поддерживается старый формат `id`, `language:ru|kk|en`, `channel:chat|call`,
+`messages:[{role,text,ts?}]`.
+
+Официальные ID и каналы не меняются. В старом формате `chat/call` переводятся в
+`agent chat/voice call`, `kk` — в `KZ`. Пропуск времени не заменяется выдуманным MM:SS.
+Все роли, включая bot/system, участвуют в исходном порядке реплик. Если реплика
+невалидна, отклоняется запись целиком, без удаления реплики и сдвига evidence.
+
+Записи отправляются последовательно. Возвращаются `imported`, `skipped`, `results`
+и `errors`. Элемент `results`: `{index,conversation_id,status:"accepted"|"rejected",
+error?,code?}`. Индекс начинается с 0; интерфейс показывает номер строки с 1.
+Ошибка отдельной записи не останавливает остальные; backend code/message сохраняются.
+
+Источник загрузки всегда `UPLOAD` и не принимается из файла. ID существующего DEV
+или другого источника защищён: `409 UPLOAD_ID_CONFLICT`, без изменений записи.
+Существующий `UPLOAD` можно обновить повторным импортом. `dataset_group_id` приходит
+в списке/детали и поддерживается как фильтр списка.
+
+Batch `all:true` без источника исключает `UPLOAD`. Явный `all:true` вместе с
+`dataset_group_id:"UPLOAD"` или явные `conversation_ids` позволяют выбрать загрузки.
+`conversation_ids` вместе с `dataset_group_id` дают 422. Частичная переоценка
+`criterion_ids` остаётся API-возможностью.
+
+## Оценки и апелляции
+
+| Поле / операция | Преобразование |
+|---|---|
+| `conversation_id`, `speaker`, `transcript` | UI: `id`, `role`, `messages`; `message_id` не меняется |
+| Строковый Decimal / `null` | Число для форматирования / `null` без замены нулём |
+| `completed`, `needs_review`, `failed` | UI-статусы сохраняют смысл; needs_review не становится успехом |
+| `points`, `effective_weight` | Баллы и нормированный вес приходят с бэкенда |
+| `answer:"na"` | `answer:null`, отдельные `na` и причина; неизвестный ответ также остаётся `null`, но не объявляется N/A |
+| `original_total`, `final_total` | Раздельные исходный и финальный итоги |
+| Критерий после решения | Финальные ответ, баллы и причина согласованы; `original_score/original_answer` сохранены отдельно |
+| Апелляция | Оспариваемые баллы берутся из `disputed_result`, не подменяются новым результатом |
+| Решение UI | approved → `change`, rejected → `confirm`; передаётся ответ, не число баллов |
+
+Evidence не генерируется на клиенте. Невалидное значение не отображается как «Нет».
+Форма решения предлагает N/A лишь при `allow_na` и никогда для flag. Список апелляций
+не обрезается до первых 100; ошибки связанных оценок не скрываются.
+
+Страница «Оценки» показывает последние результаты из списка диалогов, с
+`meta.derived_from`. Полная история — в карточке диалога. В таком списке неизвестны
+дата создания оценки и номер версии; они не выдумываются. В полной карточке эти
+данные берутся из реального ответа оценки.
+
+## Чек-листы и остальные ограничения
+
+Редактор API передаёт `yes_text`, `no_text` и точный `scale_definition` как backend
+`scale` — словарь числовых ступеней и описаний. Min/max не превращаются в набор
+сгенерированных промежуточных ступеней. Неотрицательные веса могут суммироваться
+не в 100; нормирование делает бэкенд. Версия неизменяема, сохранение создаёт новую.
+Секции, неактивные критерии и исходные метаданные сохраняются.
+
+Операторы не группируются по именам из реплик: стабильного `operator_id` нет.
+Экран объясняет ограничение без фиктивных профилей. Пагинация/сортировка клиентские;
+batch/progress, partial re-evaluation и ai-suggest доступны через API. Отдельного
+поля заметки к версии нет, его ввод в API-режиме скрыт. Список оценок показывает
+последний результат каждого диалога; недоступные фильтр версии, колонки версии/даты
+и сортировка по дате скрыты. История и метаданные доступны в карточках.
+Demo Auth не является аутентификацией проверяющего.
+
+## Проверки
+
+Текущие проверки адаптера: `node tests/contract_adapter_node.mjs` — 10/10;
+существующий `tests/adapters.js` под Node с DOM shim — 47/47. Это не подтверждение
+нового вызова модели или текущего браузерного прогона. Разделение текущих и прошлых
+результатов, безопасный запуск browser harness: [testing.md](testing.md).
 
 ---
 
-# Приложение: внутренний view-model UI (бывшее «предложение Frontend»)
+# Архив: демонстрационный view-model и первоначальное предложение
+
+**Все endpoints, требования и примеры ниже исторические. Это Demo view-model,
+а не текущий REST-контракт.** В частности, `/overview`, `/operators`,
+`/conversations/import`, обязательная сумма весов 100 и старые правила шкал
+не описывают текущий API. Используйте таблицы выше и [API_CONTRACT.md](../API_CONTRACT.md).
+
+<details>
+<summary>Открыть сохранённое первоначальное описание Demo UI</summary>
+
+
 
 > Это формат, которым оперируют страницы UI и Mock Adapter. Реальный Backend отдаёт другой формат; перевод делает
 > `js/realApiAdapter.js`. Раздел сохранён как описание view-model и список того, что UI умеет отображать.
@@ -260,5 +340,8 @@ Frontend сам добавляет `meta.source = "mock" | "api"`.
 
 * `tests/smoke.html` — автоматические smoke-тесты (Mock Mode, Backend не нужен): слой данных, UI-компоненты, паритет i18n, обход всех
   разделов в RU/KK/EN на ширинах 1280 и 390 px, поведение (поиск/фильтры/evidence/апелляции/чек-лист/ошибка API-режима).
-  Запуск: `python -m http.server 5173` из корня проекта → открыть `http://localhost:5173/tests/smoke.html`; итог в `document.title` (`SMOKE PASS n/n`) и в `window.__SMOKE__`.
+  Актуальный безопасный запуск: [изолированная тестовая статика](testing.md#изолированная-статика-для-браузерных-тестов); итог в `document.title` и `window.__SMOKE__`.
 * Для проверки контракта с реальным Backend (Stage 4): переключить индикатор «Демо» → «API» и прогнать те же сценарии; тесты слоя данных можно направить на `api` режим, сменив `setMode('api')` и подготовив тестовые данные на Backend.
+
+
+</details>

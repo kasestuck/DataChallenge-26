@@ -3,7 +3,7 @@ import { getApiBase, TIMEOUT_MS } from './config.js';
 
 export class ApiError extends Error {
   constructor(kind, status = 0, url = '', detail = '', code = '') {
-    super(`API ${kind}${status ? ` ${status}` : ''}`);
+    super(detail || `API ${kind}${status ? ` ${status}` : ''}`);
     this.name = 'ApiError';
     this.kind = kind;       // 'network' | 'timeout' | 'http' | 'unsupported' | 'invalid'
     this.status = status;

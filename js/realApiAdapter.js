@@ -7,14 +7,14 @@ import { request, ApiError, sleep } from './http.js';
 import { LONG_TIMEOUT_MS } from './config.js';
 
 const src = (data) => ({ ...data, meta: { ...(data?.meta || {}), source: 'api' } });
-const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+const num = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 const enc = encodeURIComponent;
 const low = (v) => String(v ?? '').toLowerCase();
 const unsupported = (what) => new ApiError('unsupported', 0, '', what);
 
 // ---------- словари значений ----------
 export const LANG_OUT = { RU: 'ru', KZ: 'kk', EN: 'en' };
-export const LANG_IN = { ru: 'RU', kk: 'KZ', en: 'EN' };
+export const LANG_IN = { ru: 'RU', kk: 'KZ', kz: 'KZ', en: 'EN' };
 export const CHANNEL_OUT = { 'agent chat': 'chat', 'voice call': 'call' };
 export const CHANNEL_IN = { chat: 'agent chat', call: 'voice call' };
 const EVAL_STATUS = { completed: 'done', needs_review: 'needs_review', failed: 'failed', pending: 'running', running: 'running' };
@@ -36,9 +36,10 @@ export function mapConversationItem(r) {
   return {
     id: r.conversation_id, language: LANG_OUT[r.language] || low(r.language), channel: CHANNEL_OUT[r.channel] || r.channel,
     operator_id: null,                       // Backend не хранит операторов — связь не выдумываем
-    status: convStatus(r), backend_status: r.status, score: num(r.total), gross_violation: r.gross_violation ?? false,
+    status: convStatus(r), backend_status: r.status, score: num(r.total), gross_violation: r.gross_violation ?? null,
     started_at: null, updated_at: r.updated_at || null, evaluation_id: r.evaluation_id || null,
     has_appeal: !!r.has_appeal, has_open_appeal: !!r.has_open_appeal, evaluation_stale: !!r.evaluation_stale,
+    dataset_group_id: r.dataset_group_id ?? null,
   };
 }
 export const mapMessage = (m) => ({ id: m.message_id, role: m.speaker, text: m.text, ts: m.timestamp || null, offset_sec: m.offset_sec ?? null, audio_url: m.audio_url || null });
@@ -52,15 +53,17 @@ export function mapChecklist(r, activeId) {
   return {
     id: r.checklist_version_id, checklist_id: r.checklist_id, version: r.version, created_at: r.created_at, is_current: r.checklist_version_id === activeId,
     note: r.name || '', name: r.name, weight_sum: r.weight_sum, sections: r.sections || [], change_summary: r.change_summary || null,
+    inactive_criteria: (r.criteria || []).filter((c) => c.active === false),
     criteria: (r.criteria || []).filter((c) => c.active !== false).map((c) => ({
       id: c.criterion_id, name: c.name, description: c.description || '', weight: num(c.weight) ?? 0, answer_type: c.type,
       scale: c.type === 'scale' ? scaleRange(c.scale) : null, na_allowed: !!c.allow_na, na_condition: c.na_condition || '',
+      scale_definition: c.type === 'scale' ? { ...c.scale } : null, yes_text: c.yes_text ?? '', no_text: c.no_text ?? '',
       gross: c.type === 'flag', builtin: true, section: c.section, _raw: c,
     })),
   };
 }
 
-// vm → тело POST /checklists. Поля, которых нет в редакторе (yes_text/no_text/section/порядок/шкала), берём из исходного критерия.
+// vm → POST /checklists. Ступени и формулировки передаются явно; пропущенные поля сохраняются из исходной версии.
 export function toChecklistRequest(body, baseVm) {
   const sections = baseVm?.sections?.length ? baseVm.sections : [{ id: 's1', name: 'Критерии' }];
   const flagSection = sections[sections.length - 1].id;
@@ -73,19 +76,18 @@ export function toChecklistRequest(body, baseVm) {
     const desc = String(txt(c.description)).trim();
     let scale = {};
     if (c.answer_type === 'scale') {
-      const range = scaleRange(raw.scale);
-      const same = range && Number(c.scale?.min) === range.min && Number(c.scale?.max) === range.max;
-      if (same) scale = raw.scale;
-      else { for (let k = Number(c.scale?.min); k <= Number(c.scale?.max); k += 1) scale[String(k)] = `${name}: ${k}`; }
+      scale = c.scale_definition ?? raw.scale ?? {};
     }
     const allowNa = !flag && !!c.na_allowed;
     return {
       criterion_id: String(c.id), name, description: desc, section: raw.section || (flag ? flagSection : sections[0].id), type: c.answer_type,
       weight: flag ? 0 : Number(c.weight) || 0, allow_na: allowNa, na_condition: allowNa ? (c.na_condition || raw.na_condition || null) : null,
-      yes_text: c.answer_type === 'scale' ? null : (raw.yes_text ?? (desc || name)), no_text: c.answer_type === 'scale' ? null : (raw.no_text ?? (desc || name)),
-      scale, scored: !flag, order: i + 1, active: true,
+      yes_text: c.answer_type === 'scale' ? null : (c.yes_text ?? raw.yes_text ?? (desc || name)), no_text: c.answer_type === 'scale' ? null : (c.no_text ?? raw.no_text ?? (desc || name)),
+      scale, scored: flag ? false : (raw.scored ?? true), order: i + 1, active: true,
     };
   });
+  const ids = new Set(criteria.map((c) => c.criterion_id));
+  criteria.push(...(baseVm?.inactive_criteria || []).filter((c) => !ids.has(c.criterion_id)));
   return { name: baseVm?.name || 'Checklist', checklist_id: baseVm?.checklist_id, sections, criteria };
 }
 
@@ -93,13 +95,14 @@ export function mapCriterion(c, checklistCriterion) {
   const type = c.type || checklistCriterion?.type || 'yes_no';
   const na = c.answer === 'na';
   const range = type === 'scale' ? scaleRange(checklistCriterion?.scale) : null;
-  const answer = na ? null : type === 'scale' ? num(c.answer) : c.answer === 'yes';
+  const answer = na ? null : type === 'scale' ? num(c.answer) : c.answer === 'yes' ? true : c.answer === 'no' ? false : null;
   const invalid = c.valid === false;
   const weight = na ? num(c.weight) : (num(c.effective_weight) ?? num(c.weight));
   const decided = (c.decisions || []).length > 0;
   return {
     criterion_id: c.criterion_id, name: c.name || checklistCriterion?.name || c.criterion_id, description: checklistCriterion?.description || '',
     weight, declared_weight: num(c.weight), answer_type: type, scale: range, scale_keys: type === 'scale' ? Object.keys(checklistCriterion?.scale || {}) : null,
+    allow_na: type !== 'flag' && !!checklistCriterion?.allow_na,
     answer, answer_key: c.answer ?? null, score: na || invalid ? null : num(c.points),
     na: na ? { reason: c.reasoning || '' } : null, gross: type === 'flag' && c.answer === 'yes',
     explanation: invalid ? (c.validation_errors || []).join('; ') : (c.reasoning || ''), invalid,
@@ -115,12 +118,17 @@ export function mapEvaluation(r, versions, checklistRaw) {
   const origById = new Map(((r.original && r.original.criteria) || []).map((c) => [c.criterion_id, c]));
   const criteria = (r.criteria || []).map((c) => {
     const m = mapCriterion(c, byId.get(c.criterion_id));
-    if (m.revised) { const o = origById.get(c.criterion_id); m.score = num(o?.points) ?? m.score; m.original_answer = o?.answer ?? null; }
+    const o = origById.get(c.criterion_id);
+    m.original_score = num(o?.points);
+    m.original_answer = o?.answer ?? null;
+    if (m.revised) Object.assign(m.revised, { original_score: m.original_score, original_answer: m.original_answer });
     delete m._decided;
     return m;
   });
   return {
     id: r.evaluation_id, conversation_id: r.conversation_id, checklist_version: versions?.get(r.checklist_version_id) ?? null, checklist_version_id: r.checklist_version_id,
+    language: r.conversation_snapshot?.language ? (LANG_OUT[r.conversation_snapshot.language] || low(r.conversation_snapshot.language)) : null,
+    channel: r.conversation_snapshot?.channel ? (CHANNEL_OUT[r.conversation_snapshot.channel] || r.conversation_snapshot.channel) : null,
     status: EVAL_STATUS[r.status] || r.status, backend_status: r.status, output_language: r.output_language || null,
     total_score: num(r.original_total ?? r.total), final_total_score: num(r.final_total ?? r.total), gross_violation: r.gross_violation ?? null,
     created_at: r.created_at || r.updated_at || null, error: r.error ? { message: r.error.message || String(r.error) } : null, usage: r.usage || null, criteria, sections: r.sections || [],
@@ -129,14 +137,20 @@ export function mapEvaluation(r, versions, checklistRaw) {
 
 export function mapAppeal(raw, ev) {
   const criterion = ev?.criteria?.find((c) => c.criterion_id === raw.criterion_id) || null;
+  const disputed = raw.disputed_result ?? raw.original_result ?? null;
+  const disputedCriterion = disputed ? mapCriterion({ ...disputed, criterion_id: raw.criterion_id }, raw.criterion) : null;
+  if (disputedCriterion) delete disputedCriterion._decided;
   const d = raw.decision || null;
   const status = raw.status === 'open' ? 'pending' : d?.decision === 'change' ? 'approved' : d ? 'rejected' : 'reviewed';
   return {
     id: raw.appeal_id, conversation_id: raw.conversation_id ?? ev?.conversation_id ?? null, evaluation_id: raw.evaluation_id, criterion_id: raw.criterion_id,
-    criterion_name: criterion?.name || raw.criterion_name || raw.criterion_id, status, comment: raw.comment, created_at: raw.created_at || null, operator_id: null,
-    original_score: criterion ? criterion.score : num(raw.original_result?.points), max_score: criterion ? criterion.weight : num(raw.original_result?.effective_weight),
+    criterion_name: criterion?.name || raw.criterion_name || raw.criterion?.name || raw.criterion_id, status, comment: raw.comment, created_at: raw.created_at || null, operator_id: null,
+    original_score: num(raw.disputed_result?.points ?? raw.original_result?.points ?? criterion?.original_score ?? criterion?.score),
+    original_answer: disputed ? (disputed.answer ?? null) : (criterion?.original_answer ?? criterion?.answer_key ?? null),
+    max_score: num(raw.disputed_result?.effective_weight ?? raw.original_result?.effective_weight ?? criterion?.weight),
+    final_max_score: num(raw.current_result?.effective_weight ?? criterion?.weight),
     decision: d ? { reviewer: d.decided_by || null, reason: d.reason || '', new_score: d.decision === 'change' ? num(raw.current_result?.points ?? criterion?.revised?.score) : null, new_answer: d.final_answer ?? null, original_answer: d.original_answer ?? null, decided_at: d.created_at || null } : null,
-    original_total_score: num(raw.original_total ?? ev?.total_score), final_total_score: num(raw.final_total ?? ev?.final_total_score), criterion, evaluation: ev || null,
+    original_total_score: num(raw.original_total ?? ev?.total_score), final_total_score: num(raw.final_total ?? ev?.final_total_score), criterion, disputed_criterion: disputedCriterion, evaluation: ev || null,
   };
 }
 
@@ -170,15 +184,19 @@ function sortItems(items, q, fields, def) {
 
 // ---------- Conversations ----------
 async function fetchConversations(p, signal) {
-  const raw = await request('/conversations', { query: { language: LANG_IN[p.language], channel: CHANNEL_IN[p.channel], q: p.q }, signal });
+  const raw = await request('/conversations', { query: { language: LANG_IN[low(p.language)] || p.language, channel: CHANNEL_IN[p.channel] || p.channel, dataset_group_id: p.dataset_group_id, q: p.q }, signal });
   return raw.map(mapConversationItem);
 }
 export async function getConversations(p = {}, { signal } = {}) {
-  let items = await fetchConversations(p, signal);
+  // Keep the actual channel choices available when one channel is selected.
+  // Backend still applies text/language/source filters; pagination is already client-side.
+  let items = await fetchConversations({ ...p, channel: undefined }, signal);
+  const availableChannels = [...new Set(items.map((c) => c.channel))].filter(Boolean).sort();
+  if (p.channel) items = items.filter((c) => c.channel === (CHANNEL_OUT[p.channel] || p.channel));
   if (p.status) items = items.filter((c) => c.status === p.status);
   if (p.operator_id) items = p.operator_id === 'none' ? items : [];   // операторов в Backend нет
   items = sortItems(items, { sort: p.sort === 'id' ? 'id' : p.sort, order: p.order }, ['score', 'id', 'updated_at'], 'updated_at');
-  return src({ ...paginate(items, p), meta: { client_side_paging: true } });
+  return src({ ...paginate(items, p), meta: { client_side_paging: true, available_channels: availableChannels } });
 }
 export async function getConversation(id, { signal } = {}) {
   const [c, hist, cl] = await Promise.all([request(`/conversations/${enc(id)}`, { signal }), request(`/conversations/${enc(id)}/evaluations`, { signal }), loadChecklists({ signal })]);
@@ -187,25 +205,56 @@ export async function getConversation(id, { signal } = {}) {
   const latest = lr ? { status: lr.status, total: lr.total, gross: lr.gross_violation } : null;
   const evaluations = hist.map((e) => ({ id: e.evaluation_id, checklist_version: versions.get(e.checklist_version_id) ?? null, status: EVAL_STATUS[e.status] || e.status, total_score: num(e.original_total ?? e.total), created_at: e.created_at || null }));
   const hasOpen = !!lr?.criteria?.some((x) => x.has_open_appeal);
-  const base = mapConversationItem({ conversation_id: c.conversation_id, language: c.language, channel: c.channel, total: latest?.total ?? null, gross_violation: latest?.gross ?? null, status: lr?.status || 'not_evaluated', evaluation_id: lr?.evaluation_id || null, has_appeal: !!lr?.decisions?.length || hasOpen, has_open_appeal: hasOpen, updated_at: c.updated_at });
+  const base = mapConversationItem({ conversation_id: c.conversation_id, language: c.language, channel: c.channel, total: latest?.total ?? null, gross_violation: latest?.gross ?? null, status: lr?.status || 'not_evaluated', evaluation_id: lr?.evaluation_id || null, has_appeal: !!lr?.decisions?.length || hasOpen, has_open_appeal: hasOpen, updated_at: c.updated_at, dataset_group_id: c.dataset_group_id, evaluation_stale: c.evaluation_stale });
   return src({ ...base, audio_url: c.audio_url || null, messages: (c.transcript || []).map(mapMessage), evaluations });
 }
 export const assignOperator = () => Promise.reject(unsupported('conversation operator assignment'));
+const importError = (detail) => new ApiError('http', 422, '', detail, 'VALIDATION_ERROR');
+export function getImportRecords(body) {
+  const list = Array.isArray(body) ? body : body?.records ?? body?.conversations;
+  if (!Array.isArray(list) || !list.length) throw importError('Ожидается непустой массив диалогов или объект с массивом records / conversations.');
+  return list;
+}
+export function toUploadRequest(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c)) throw importError('Запись диалога должна быть объектом.');
+  const organizer = Object.hasOwn(c, 'transcript');
+  const messages = organizer ? c.transcript : c.messages;
+  if (!Array.isArray(messages) || !messages.length) throw importError('transcript / messages должен быть непустым массивом.');
+  const language = LANG_IN[low(c.language)];
+  if (!language) throw importError('language: допустимы RU, KZ, EN (или ru, kk, en).');
+  if (typeof c.channel !== 'string' || !c.channel.trim()) throw importError('channel должен быть непустой строкой.');
+  const id = c.conversation_id ?? c.id;
+  if ((organizer || id != null) && (typeof id !== 'string' || !id.trim())) throw importError('conversation_id должен быть непустой строкой.');
+  const transcript = messages.map((m, i) => {
+    if (!m || typeof m !== 'object' || Array.isArray(m)) throw importError(`Реплика ${i + 1}: ожидается объект.`);
+    const speaker = organizer ? m.speaker : m.role;
+    if (!['client', 'operator', 'bot', 'system'].includes(speaker)) throw importError(`Реплика ${i + 1}: недопустимая роль.`);
+    if (typeof m.text !== 'string' || !m.text.trim()) throw importError(`Реплика ${i + 1}: text должен быть непустой строкой.`);
+    const timestamp = Object.hasOwn(m, 'timestamp') ? m.timestamp : Object.hasOwn(m, 'ts') ? m.ts : '';
+    if (timestamp != null && typeof timestamp !== 'string') throw importError(`Реплика ${i + 1}: timestamp должен быть строкой или null.`);
+    return { timestamp, speaker, text: m.text };
+  });
+  if (c.audio_url != null && typeof c.audio_url !== 'string') throw importError('audio_url должен быть строкой или null.');
+  return { ...(id != null ? { conversation_id: id } : {}), language, channel: organizer ? c.channel : (CHANNEL_IN[c.channel] || c.channel), transcript, audio_url: c.audio_url ?? null };
+}
 // Импорт реализован через реальный POST /conversations/upload (по одному диалогу).
 export async function importConversations(body, { signal } = {}) {
-  const list = Array.isArray(body?.conversations) ? body.conversations : [];
-  if (!list.length) throw new ApiError('http', 422, '', 'conversations required', 'VALIDATION_ERROR');
-  let imported = 0, skipped = 0; const errors = [];
+  const list = getImportRecords(body);
+  let imported = 0, skipped = 0; const errors = [], results = [];
   for (let i = 0; i < list.length; i += 1) {
     const c = list[i];
-    const transcript = (c.messages || []).filter((m) => m && m.text).map((m) => ({ speaker: m.role, text: m.text, ...(m.ts ? { timestamp: m.ts } : {}) }));
-    if (!transcript.length || !LANG_IN[c.language] || !CHANNEL_IN[c.channel]) { skipped += 1; errors.push({ index: i, error: !transcript.length ? 'messages' : !LANG_IN[c.language] ? 'language' : 'channel' }); continue; }
     try {
-      await request('/conversations/upload', { method: 'POST', body: { ...(c.id ? { conversation_id: c.id } : {}), language: LANG_IN[c.language], channel: CHANNEL_IN[c.channel], transcript, ...(c.audio_url ? { audio_url: c.audio_url } : {}) }, signal });
+      const saved = await request('/conversations/upload', { method: 'POST', body: toUploadRequest(c), signal });
       imported += 1;
-    } catch (e) { if (e?.name === 'AbortError') throw e; skipped += 1; errors.push({ index: i, error: e.code || e.detail || 'error' }); }
+      results.push({ index: i, conversation_id: saved.conversation_id, status: 'accepted' });
+    } catch (e) {
+      if (e?.name === 'AbortError') throw e;
+      skipped += 1;
+      const error = { index: i, conversation_id: c?.conversation_id ?? c?.id ?? null, error: e.detail || e.message || 'Ошибка импорта.', code: e.code || e.kind || 'IMPORT_ERROR' };
+      errors.push(error); results.push({ ...error, status: 'rejected' });
+    }
   }
-  return src({ imported, skipped, errors });
+  return src({ imported, skipped, results, errors });
 }
 
 // ---------- Evaluations ----------
@@ -213,7 +262,7 @@ export async function getEvaluations(p = {}, { signal } = {}) {
   const convs = await fetchConversations({ language: p.language, q: p.q }, signal);
   let items = convs.filter((c) => c.evaluation_id).map((c) => ({
     id: c.evaluation_id, conversation_id: c.id, checklist_version: null, status: EVAL_STATUS[c.backend_status] || c.backend_status, total_score: c.score, final_total_score: null,
-    gross_violation: c.gross_violation, created_at: c.updated_at, language: c.language, operator_id: null, error: null,
+    gross_violation: c.gross_violation, created_at: null, updated_at: c.updated_at, language: c.language, operator_id: null, error: null,
   }));
   if (p.status) items = items.filter((e) => e.status === p.status);
   if (p.gross) items = items.filter((e) => e.gross_violation);
@@ -237,8 +286,46 @@ export async function runEvaluation(body, { signal } = {}) {
   return src(await evaluationVm(raw, signal));
 }
 
-// ---------- Operators / Overview — Backend этого не предоставляет ----------
-export const getOverview = () => Promise.reject(unsupported('overview'));
+// ---------- Overview: текущий снимок БД, без выдуманного временного ряда ----------
+const mean = (values) => values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+export function mapOverview(conversations, appeals, stats) {
+  const eligible = conversations.filter((c) => c.status === 'completed' && !c.evaluation_stale && num(c.total) != null);
+  const scores = eligible.map((c) => num(c.total)).sort((a, b) => a - b);
+  const middle = Math.floor(scores.length / 2);
+  const median = scores.length ? (scores.length % 2 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2) : null;
+  const breakdown = (key, mapValue) => [...new Set(conversations.map((c) => c[key]))].map((value) => ({
+    [key]: mapValue(value), count: conversations.filter((c) => c[key] === value).length,
+    avg_score: mean(eligible.filter((c) => c[key] === value).map((c) => num(c.total))),
+  }));
+  const recent = (items) => sortItems(items, { sort: 'created_at', order: 'desc' }, ['created_at'], 'created_at').slice(0, 6);
+  const recentConversations = sortItems(conversations.map(mapConversationItem), { sort: 'updated_at', order: 'desc' }, ['updated_at'], 'updated_at').slice(0, 6);
+  return src({
+    kpis: {
+      total_count: conversations.length, evaluated_count: conversations.filter((c) => c.status === 'completed').length,
+      scored_count: scores.length, stale_count: conversations.filter((c) => c.evaluation_stale).length,
+      needs_review_count: conversations.filter((c) => c.status === 'needs_review').length,
+      failed_count: conversations.filter((c) => c.status === 'failed').length,
+      not_evaluated_count: conversations.filter((c) => c.status === 'not_evaluated').length,
+      running_count: conversations.filter((c) => ['pending', 'running'].includes(c.status)).length,
+      avg_score: mean(scores), median_score: median, avg_score_delta: null,
+      gross_violations_count: conversations.filter((c) => !c.evaluation_stale && c.gross_violation === true).length,
+      pending_appeals_count: appeals.filter((a) => a.status === 'open').length,
+    },
+    trend: [],
+    score_distribution: [0, 20, 40, 60, 80].map((min) => ({ min, max: min + 20, upper_inclusive: min === 80, count: scores.filter((v) => v >= min && (min === 80 ? v <= 100 : v < min + 20)).length })),
+    by_language: breakdown('language', (v) => LANG_OUT[v] || low(v)),
+    by_channel: breakdown('channel', (v) => CHANNEL_OUT[v] || v),
+    recent_conversations: recentConversations, recent_appeals: recent(appeals.map((a) => mapAppeal(a))),
+    cost: stats.total, meta: { period: 'all', period_supported: false, trend_available: false, score_basis: 'latest completed non-stale evaluation', cost_basis: 'all recorded LLM calls, including repeats and appeals' },
+  });
+}
+export async function getOverview({ signal } = {}) {
+  const [conversations, appeals, stats] = await Promise.all([
+    request('/conversations', { signal }), request('/appeals', { signal }), request('/stats/cost', { signal }),
+  ]);
+  return mapOverview(conversations, appeals, stats);
+}
+// В исходных данных нет стабильного идентификатора оператора.
 export const getOperators = () => Promise.reject(unsupported('operators'));
 export const getOperator = () => Promise.reject(unsupported('operators'));
 
@@ -250,11 +337,10 @@ async function appealVm(raw, signal) {
 export async function getAppeals(p = {}, { signal } = {}) {
   const backendStatus = p.status === 'pending' ? 'open' : p.status ? 'reviewed' : undefined;
   const raws = await request('/appeals', { query: { status: backendStatus }, signal });
-  const full = await Promise.all(raws.slice(0, 100).map((r) => request(`/appeals/${enc(r.appeal_id)}`, { signal }).catch(() => r)));
   const evCache = new Map();
-  let items = await Promise.all(full.map(async (r) => {
+  let items = await Promise.all(raws.map(async (r) => {
     let ev = evCache.get(r.evaluation_id);
-    if (!ev) { ev = request(`/evaluations/${enc(r.evaluation_id)}`, { signal }).then((x) => evaluationVm(x, signal)).catch(() => null); evCache.set(r.evaluation_id, ev); }
+    if (!ev) { ev = request(`/evaluations/${enc(r.evaluation_id)}`, { signal }).then((x) => evaluationVm(x, signal)); evCache.set(r.evaluation_id, ev); }
     return mapAppeal(r, await ev);
   }));
   const needle = low(p.q).trim();

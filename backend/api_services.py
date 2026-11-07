@@ -6,6 +6,7 @@ import sqlite3
 from uuid import uuid4
 
 from backend.dataset import get_conversation, import_dataset
+from backend.db import write_transaction
 from backend.evaluator import get_evaluation
 
 
@@ -55,11 +56,22 @@ def upload_conversation(conn: sqlite3.Connection, record: dict) -> dict:
     record["conversation_id"] = record.get("conversation_id") or f"upload-{uuid4()}"
     if isinstance(record.get("transcript"), str):
         record["transcript"] = parse_plain_transcript(record["transcript"])
-    outcome = import_dataset(conn, {
-        "isSuccess": True, "error": "", "data": {
-            "dataset_group_id": "UPLOAD", "total_records": 1, "records": [record],
-        },
-    })
+    with write_transaction(conn):
+        existing = conn.execute(
+            "SELECT dataset_group_id FROM conversations WHERE conversation_id=?",
+            (record["conversation_id"],),
+        ).fetchone()
+        if existing is not None and existing["dataset_group_id"] != "UPLOAD":
+            raise APIError(
+                "UPLOAD_ID_CONFLICT",
+                "Этот conversation_id уже принадлежит другому набору. Исходный диалог не изменён; используйте другой ID для загрузки.",
+                409,
+            )
+        outcome = import_dataset(conn, {
+            "isSuccess": True, "error": "", "data": {
+                "dataset_group_id": "UPLOAD", "total_records": 1, "records": [record],
+            },
+        })
     return {"conversation_id": record["conversation_id"], "import_result": outcome,
             "conversation": conversation_detail(conn, record["conversation_id"])}
 
@@ -96,7 +108,8 @@ def conversation_history(conn: sqlite3.Connection, conversation_id: str) -> list
     ).fetchall()]
 
 
-def conversation_list(conn: sqlite3.Connection, *, language=None, channel=None, status=None, q=None) -> list[dict]:
+def conversation_list(conn: sqlite3.Connection, *, language=None, channel=None, status=None, q=None,
+                      dataset_group_id=None) -> list[dict]:
     rows = conn.execute("""
         SELECT c.conversation_id,c.dataset_group_id,c.language,c.channel,c.revision,c.updated_at,
                e.evaluation_id,e.status,e.final_total AS total,e.gross_violation,e.conversation_revision,
@@ -116,6 +129,8 @@ def conversation_list(conn: sqlite3.Connection, *, language=None, channel=None, 
     for row in rows:
         item = dict(row)
         item["status"] = item["status"] or "not_evaluated"
+        if dataset_group_id is not None and item["dataset_group_id"] != dataset_group_id:
+            continue
         if language and item["language"] != language or channel and item["channel"] != channel or status and item["status"] != status:
             continue
         if needle and needle not in item["conversation_id"].casefold():

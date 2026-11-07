@@ -1,7 +1,7 @@
 // Checklist Builder: просмотр версий чек-листа, создание новой версии (черновик → сохранение), редактор критериев,
 // проверка суммы весов, переоценка диалогов выбранной версией. Критерии НЕ зашиты в HTML: всё строится из данных API.
 // Сохранённые версии не изменяются (immutable): правка всегда порождает новую версию.
-// Сумма весов проверяется только как конфигурация (должна быть 100, критерий-флаг не в счёте); баллы диалогов здесь не считаются.
+// В API итог нормируется на Backend; сумма весов не обязана равняться 100.
 import { t, applyDom, getLang } from '../../../src/i18n/index.js';
 import { getMode, getApiBase, setMode, isAbort, getChecklists, saveChecklist, runEvaluation } from '../../api.js';
 import { esc, icon, num, loc, tr, dateTime, errorState, errorText, emptyState, mockBanner, loadingState, chip } from '../ui.js';
@@ -11,7 +11,15 @@ const TYPES = ['yes_no', 'scale', 'flag'];
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const setLoc = (cur, v) => (cur && typeof cur === 'object' ? { ...cur, [getLang()]: v } : v);
 const textOf = (v) => (v && typeof v === 'object' ? loc(v) : String(v ?? ''));
-const sumOf = (list) => Math.round(list.filter((c) => c.answer_type !== 'flag').reduce((s, c) => s + (Number(c.weight) || 0), 0) * 100) / 100;
+const sumOf = (list) => Math.round(list.filter((c) => c.answer_type !== 'flag' && c._raw?.active !== false && c._raw?.scored !== false).reduce((s, c) => s + (Number(c.weight) || 0), 0) * 100) / 100;
+
+export function parseScaleDefinition(value) {
+  const scale = JSON.parse(value);
+  if (!scale || typeof scale !== 'object' || Array.isArray(scale)) throw new Error('scale');
+  const keys = Object.keys(scale), steps = keys.map(Number);
+  if (keys.length < 2 || keys.some((key) => !key.trim()) || steps.some((n) => !Number.isFinite(n) || n < 0) || new Set(steps).size !== steps.length || Math.max(...steps) <= 0 || Object.values(scale).some((v) => typeof v !== 'string' || !v.trim())) throw new Error('scale');
+  return scale;
+}
 
 export function mountChecklist(root, ctx) {
   let items = [], sel = null, draft = null, base = null, err = null, loading = true, ac = new AbortController(), saving = false, dirty = false, mock = false, seq = 0;
@@ -19,6 +27,7 @@ export function mountChecklist(root, ctx) {
   root.innerHTML = '<div class="cl" data-body></div>';
   const body = root.querySelector('[data-body]');
   const current = () => items.find((c) => c.version === sel) || items[0];
+  const api = () => getMode() === 'api';
 
   async function load(keep = true) {
     ac.abort(); ac = new AbortController();
@@ -37,12 +46,16 @@ export function mountChecklist(root, ctx) {
     const out = [];
     const sum = sumOf(draft);
     if (!draft.length) out.push(t('ws.cl.vEmpty'));
-    if (sum !== 100) out.push(t('ws.cl.vSum', { sum: num(sum, 2) }));
+    if (!api() && sum !== 100) out.push(t('ws.cl.vSum', { sum: num(sum, 2) }));
     draft.forEach((c, i) => {
       const n = i + 1;
       if (!textOf(c.name).trim()) out.push(t('ws.cl.vName', { n }));
-      if (c.answer_type !== 'flag' && !(Number(c.weight) >= 0 && Number(c.weight) <= 100)) out.push(t('ws.cl.vWeight', { n }));
-      if (c.answer_type === 'scale' && !(Number(c.scale?.min) < Number(c.scale?.max))) out.push(t('ws.cl.vScale', { n }));
+      if (c.answer_type !== 'flag' && (c.weight === '' || !Number.isFinite(Number(c.weight)) || Number(c.weight) < 0 || (!api() && Number(c.weight) > 100))) out.push(t(api() ? 'ws.contract.weightInvalid' : 'ws.cl.vWeight', { n }));
+      if (c.answer_type === 'scale') {
+        if (api()) { try { parseScaleDefinition(c.scale_definition_text ?? JSON.stringify(c.scale_definition || {})); } catch { out.push(t('ws.contract.scaleInvalid', { n })); } }
+        else if (!(Number(c.scale?.min) < Number(c.scale?.max))) out.push(t('ws.cl.vScale', { n }));
+      }
+      if (api() && c.answer_type !== 'scale' && (!textOf(c.yes_text).trim() || !textOf(c.no_text).trim())) out.push(t('ws.contract.answerTextInvalid', { n }));
       if (c.na_allowed && !textOf(c.na_condition).trim()) out.push(t('ws.cl.vNa', { n }));
     });
     return out;
@@ -52,7 +65,7 @@ export function mountChecklist(root, ctx) {
     if (!box || !draft) return;
     const list = issues();
     const sum = sumOf(draft);
-    box.innerHTML = `<div class="sumbar sumbar--${sum === 100 ? 'ok' : 'bad'}" role="status"><b>${esc(t('ws.cl.sum'))}: ${esc(num(sum, 2))} / 100</b><i><i style="width:${Math.min(100, sum)}%"></i></i></div>
+    box.innerHTML = `<div class="sumbar sumbar--${api() ? (list.length ? 'bad' : 'ok') : sum === 100 ? 'ok' : 'bad'}" role="status"><b>${esc(t('ws.cl.sum'))}: ${esc(num(sum, 2))}${api() ? '' : ' / 100'}</b>${api() ? '' : `<i><i style="width:${Math.min(100, sum)}%"></i></i>`}</div>${api() ? `<p class="form-hint">${esc(t('ws.contract.weightNote'))}</p>` : ''}
       ${list.length ? `<ul class="form-errs" aria-live="polite">${list.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="form-ok">${esc(t('ws.cl.valid'))}</p>`}`;
     const btn = body.querySelector('[data-act="save"]');
     if (btn) btn.disabled = saving || list.length > 0;
@@ -62,7 +75,7 @@ export function mountChecklist(root, ctx) {
   const critView = (c) => `<article class="crit${c.gross || c.answer_type === 'flag' ? ' crit--gross' : ''}">
       <header class="crit__head"><h4>${esc(textOf(c.name))}</h4><span class="crit__pills">${c.answer_type === 'flag' ? '' : `<span class="pill">${esc(t('ws.crit.weightN', { n: num(c.weight) }))}</span>`}<span class="pill pill--type">${esc(tr(`ws.atype.${c.answer_type}`, c.answer_type))}</span>${c.builtin ? `<span class="pill">${esc(t('ws.cl.builtin'))}</span>` : `<span class="pill pill--custom">${esc(t('ws.cl.custom'))}</span>`}</span></header>
       ${c.description ? `<p class="crit__desc">${esc(textOf(c.description))}</p>` : ''}
-      <p class="crit__res">${c.answer_type === 'scale' ? `<span>${esc(t('ws.cl.scale'))}: <b>${esc(num(c.scale?.min ?? 0))}–${esc(num(c.scale?.max ?? 5))}</b></span>` : ''}<span>${esc(t('ws.cl.naAllowed'))}: <b>${esc(t(c.na_allowed ? 'ws.common.yes' : 'ws.common.no'))}</b></span></p>
+      <p class="crit__res">${c.answer_type === 'scale' ? `<span>${esc(t('ws.cl.scale'))}: <b>${api() ? esc(Object.keys(c.scale_definition || {}).join(' / ')) : `${esc(num(c.scale?.min ?? 0))}–${esc(num(c.scale?.max ?? 5))}`}</b></span>` : ''}<span>${esc(t('ws.cl.naAllowed'))}: <b>${esc(t(c.na_allowed ? 'ws.common.yes' : 'ws.common.no'))}</b></span></p>
       ${c.na_allowed && textOf(c.na_condition) ? `<p class="crit__exp"><b>${esc(t('ws.cl.naCond'))}:</b> ${esc(textOf(c.na_condition))}</p>` : ''}</article>`;
 
   const critEdit = (c, i) => {
@@ -72,11 +85,13 @@ export function mountChecklist(root, ctx) {
       <label class="field"><span>${esc(t('ws.cl.desc'))}</span><textarea data-f="description" rows="2" maxlength="500">${esc(textOf(c.description))}</textarea></label>
       <div class="ce__row">
         <label class="field"><span>${esc(t('ws.cl.type'))}</span><select data-f="answer_type">${TYPES.map((x) => `<option value="${x}"${c.answer_type === x ? ' selected' : ''}>${esc(tr(`ws.atype.${x}`, x))}</option>`).join('')}</select></label>
-        <label class="field"><span>${esc(t('ws.cl.weight'))}</span><input type="number" data-f="weight" min="0" max="100" step="0.5" value="${esc(flag ? 0 : c.weight)}" ${flag ? 'disabled' : ''} inputmode="decimal"></label>
-        ${c.answer_type === 'scale' ? `<label class="field"><span>${esc(t('ws.cl.scaleMin'))}</span><input type="number" data-f="scale_min" step="1" value="${esc(c.scale?.min ?? 0)}"></label><label class="field"><span>${esc(t('ws.cl.scaleMax'))}</span><input type="number" data-f="scale_max" step="1" value="${esc(c.scale?.max ?? 5)}"></label>` : ''}
+        <label class="field"><span>${esc(t('ws.cl.weight'))}</span><input type="number" data-f="weight" min="0" ${api() ? 'step="any"' : 'max="100" step="0.5"'} value="${esc(flag ? 0 : c.weight)}" ${flag ? 'disabled' : ''} inputmode="decimal"></label>
+        ${c.answer_type === 'scale' && !api() ? `<label class="field"><span>${esc(t('ws.cl.scaleMin'))}</span><input type="number" data-f="scale_min" step="1" value="${esc(c.scale?.min ?? 0)}"></label><label class="field"><span>${esc(t('ws.cl.scaleMax'))}</span><input type="number" data-f="scale_max" step="1" value="${esc(c.scale?.max ?? 5)}"></label>` : ''}
       </div>
+      ${api() && c.answer_type === 'scale' ? `<label class="field"><span>${esc(t('ws.contract.scaleDefinition'))}</span><textarea data-f="scale_definition_text" rows="5">${esc(c.scale_definition_text ?? JSON.stringify(c.scale_definition || {}, null, 2))}</textarea></label>` : ''}
+      ${api() && c.answer_type !== 'scale' ? `<label class="field"><span>${esc(t('ws.contract.yesText'))}</span><textarea data-f="yes_text" rows="2">${esc(textOf(c.yes_text))}</textarea></label><label class="field"><span>${esc(t('ws.contract.noText'))}</span><textarea data-f="no_text" rows="2">${esc(textOf(c.no_text))}</textarea></label>` : ''}
       ${flag ? `<p class="form-hint">${esc(t('ws.cl.flagHint'))}</p>` : ''}
-      <label class="radio ce__na"><input type="checkbox" data-f="na_allowed"${c.na_allowed ? ' checked' : ''}><span>${esc(t('ws.cl.naAllowed'))}</span></label>
+      <label class="radio ce__na"><input type="checkbox" data-f="na_allowed"${c.na_allowed ? ' checked' : ''}${flag ? ' disabled' : ''}><span>${esc(t('ws.cl.naAllowed'))}</span></label>
       ${c.na_allowed ? `<label class="field"><span>${esc(t('ws.cl.naCond'))}</span><input type="text" data-f="na_condition" value="${esc(textOf(c.na_condition))}" maxlength="240" placeholder="${esc(t('ws.cl.naCondPh'))}"></label>` : ''}
       <div class="ce__foot">${c.builtin ? `<span class="form-hint">${esc(t('ws.cl.noDelete'))}</span>` : `<button class="btn btn--ghost btn--sm" type="button" data-act="del" data-i="${i}">${icon('trash')}${esc(t('ws.common.delete'))}</button>`}</div></fieldset>`;
   };
@@ -90,7 +105,7 @@ export function mountChecklist(root, ctx) {
       body.innerHTML = `${mock ? mockBanner() : ''}<div class="cd__head"><div class="cd__id"><h2>${esc(t('ws.cl.draftTitle', { n: num(items[0].version + 1) }))}</h2>${chip('evaluating', t('ws.cl.draft'))}</div><p class="muted">${esc(t('ws.cl.basedOn', { n: num(base) }))}</p></div>
         <div class="ce-wrap" data-edit>${draft.map(critEdit).join('')}
           <div class="ce__add"><button class="btn btn--ghost" type="button" data-act="add">${icon('plus')}${esc(t('ws.cl.add'))}</button></div>
-          <label class="field"><span>${esc(t('ws.cl.note'))}</span><textarea data-note rows="2" maxlength="300" placeholder="${esc(t('ws.cl.notePh'))}"></textarea></label>
+          ${api() ? '' : `<label class="field"><span>${esc(t('ws.cl.note'))}</span><textarea data-note rows="2" maxlength="300" placeholder="${esc(t('ws.cl.notePh'))}"></textarea></label>`}
           <div data-status></div>
           <div class="form-actions"><button class="btn btn--ghost" type="button" data-act="cancel">${esc(t('ws.common.cancel'))}</button><button class="btn" type="button" data-act="save">${esc(saving ? t('ws.cl.saving') : t('ws.cl.save'))}</button></div></div>`;
       const note = body.querySelector('[data-note]'); if (note) note.value = draft.__note || '';
@@ -102,8 +117,8 @@ export function mountChecklist(root, ctx) {
         <label class="fsel"><span>${esc(t('ws.cl.version'))}</span><select data-ver>${items.map((c) => `<option value="${c.version}"${c.version === cur.version ? ' selected' : ''}>v${num(c.version)}${c.is_current ? ` · ${esc(t('ws.eval.current'))}` : ''}</option>`).join('')}</select></label>
         <div class="lp__extra"><button class="btn btn--ghost" type="button" data-act="reeval">${icon('refresh')}${esc(t('ws.cl.reeval'))}</button><button class="btn" type="button" data-act="new">${icon('plus')}${esc(t('ws.cl.newVersion', { n: num(cur.version) }))}</button></div></div>
       <div class="cd__head"><div class="cd__id"><h2>${esc(t('ws.cl.title', { n: num(cur.version) }))}</h2>${cur.is_current ? chip('evaluated', t('ws.eval.current')) : ''}</div>
-        <dl class="cd__meta"><div><dt>${esc(t('ws.col.date'))}</dt><dd>${esc(dateTime(cur.created_at))}</dd></div><div><dt>${esc(t('ws.cl.count'))}</dt><dd>${num((cur.criteria || []).length)}</dd></div><div><dt>${esc(t('ws.cl.sum'))}</dt><dd>${esc(num(sum, 2))} / 100</dd></div></dl></div>
-      ${cur.note ? `<p class="form-hint">${esc(t('ws.cl.note'))}: ${esc(cur.note)}</p>` : ''}
+        <dl class="cd__meta"><div><dt>${esc(t('ws.col.date'))}</dt><dd>${esc(dateTime(cur.created_at))}</dd></div><div><dt>${esc(t('ws.cl.count'))}</dt><dd>${num((cur.criteria || []).length)}</dd></div><div><dt>${esc(t('ws.cl.sum'))}</dt><dd>${esc(num(sum, 2))}${api() ? '' : ' / 100'}</dd></div></dl></div>
+      ${cur.note && !api() ? `<p class="form-hint">${esc(t('ws.cl.note'))}: ${esc(cur.note)}</p>` : ''}
       <p class="form-hint">${esc(t('ws.cl.immutable'))}</p>
       <div class="crit-list">${(cur.criteria || []).map(critView).join('')}</div>`;
   }
@@ -140,7 +155,7 @@ export function mountChecklist(root, ctx) {
     if (saving || issues().length) return;
     saving = true; render();
     try {
-      const payload = { base_version: base, note: (draft.__note || '').trim(), criteria: draft.map((c) => ({ ...c, name: c.name, weight: c.answer_type === 'flag' ? 0 : Number(c.weight) || 0, gross: c.answer_type === 'flag' ? true : !!c.gross, scale: c.answer_type === 'scale' ? { min: Number(c.scale?.min ?? 0), max: Number(c.scale?.max ?? 5) } : null, na_condition: c.na_allowed ? c.na_condition : '' })) };
+      const payload = { base_version: base, note: (draft.__note || '').trim(), criteria: draft.map((c) => ({ ...c, name: c.name, weight: c.answer_type === 'flag' ? 0 : Number(c.weight) || 0, gross: c.answer_type === 'flag' ? true : !!c.gross, scale: c.answer_type === 'scale' ? { min: Number(c.scale?.min ?? 0), max: Number(c.scale?.max ?? 5) } : null, ...(api() && c.answer_type === 'scale' ? { scale_definition: parseScaleDefinition(c.scale_definition_text ?? JSON.stringify(c.scale_definition || {})) } : {}), na_condition: c.na_allowed ? c.na_condition : '' })) };
       const saved = await saveChecklist(payload);
       draft = null; dirty = false; saving = false;
       toast(t('ws.cl.saved', { n: num(saved.version) }));
@@ -148,7 +163,7 @@ export function mountChecklist(root, ctx) {
     } catch (e) {
       if (isAbort(e)) return;
       saving = false; render();
-      toast(e.kind === 'http' && e.status === 422 ? t('ws.cl.rejected') : errorText(e, getApiBase()), { kind: 'error' });
+      toast(errorText(e, getApiBase()), { kind: 'error' });
     }
   }
 
@@ -161,7 +176,7 @@ export function mountChecklist(root, ctx) {
       body: `<p class="modal__text">${esc(t('ws.cl.reText'))}</p>
         <label class="field"><span>${esc(t('ws.cl.version'))}</span><select data-rv>${items.map((c) => `<option value="${c.version}"${c.version === cur.version ? ' selected' : ''}>v${num(c.version)}${c.is_current ? ` · ${esc(t('ws.eval.current'))}` : ''}</option>`).join('')}</select></label>
         <label class="field"><span>${esc(t('ws.cl.reIds'))}</span><textarea data-ids rows="4" placeholder="DEMO-1001, DEMO-1002"></textarea></label>
-        <p class="form-hint">${esc(t('ws.cl.reHint'))}</p><ul class="re-res" data-res aria-live="polite"></ul>`,
+        <p class="form-hint">${esc(t(api() ? 'ws.reeval.hintAPI' : 'ws.cl.reHint'))}</p><ul class="re-res" data-res aria-live="polite"></ul>`,
       actions: `<button class="btn btn--ghost" type="button" data-modal-close>${esc(t('ws.common.close'))}</button><button class="btn" type="button" data-run>${esc(t('ws.cl.reRun'))}</button>`,
     });
     const q = (s) => m.el.querySelector(s);
@@ -173,21 +188,26 @@ export function mountChecklist(root, ctx) {
       if (ids.length > 50) { res.innerHTML = `<li class="re--bad">${esc(t('ws.cl.reMax', { n: 50 }))}</li>`; return; }
       busy = true; q('[data-run]').disabled = true; res.innerHTML = '';
       const version = Number(q('[data-rv]').value);
-      let ok = 0;
+      let ok = 0, review = 0;
       for (const id of ids) {
         if (stop) break;
         const li = document.createElement('li'); li.textContent = `${id}: …`; res.append(li);
         try {
-          await runEvaluation({ conversation_id: id, checklist_version: version });
-          li.className = 're--ok'; li.textContent = `${id}: ${t('ws.cl.reOk')}`; ok++;
+          const result = await runEvaluation({ conversation_id: id, checklist_version: version });
+          if (api()) {
+            li.className = result.status === 'done' ? 're--ok' : result.status === 'failed' ? 're--bad' : '';
+            li.textContent = `${id}: ${result.status === 'failed' && result.error?.message ? result.error.message : tr(`ws.status.eval.${result.status}`, result.status)}`;
+            if (result.status === 'done') ok++;
+            if (result.status === 'needs_review') review++;
+          } else { li.className = 're--ok'; li.textContent = `${id}: ${t('ws.cl.reOk')}`; ok++; }
         } catch (e) {
           if (isAbort(e)) return;
           li.className = 're--bad';
-          li.textContent = `${id}: ${e.kind === 'http' && e.status === 409 ? t('ws.cl.reExists') : e.kind === 'http' && e.status === 404 ? t('ws.state.notFound') : errorText(e, getApiBase())}`;
+          li.textContent = `${id}: ${!api() && e.kind === 'http' && e.status === 409 ? t('ws.cl.reExists') : errorText(e, getApiBase())}`;
         }
       }
       busy = false; q('[data-run]').disabled = false;
-      if (!stop) toast(t('ws.cl.reDone', { ok: num(ok), n: num(ids.length) }), { kind: ok ? 'success' : 'error' });
+      if (!stop) toast(t(api() ? 'ws.reeval.doneAPI' : 'ws.cl.reDone', { ok: num(ok), n: num(ids.length) }), { kind: ok ? 'success' : review ? 'info' : 'error' });
     });
   }
 
@@ -200,11 +220,12 @@ export function mountChecklist(root, ctx) {
     const c = draft[Number(fs.dataset.i)];
     const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (f === 'name' || f === 'description' || f === 'na_condition') c[f] = setLoc(c[f], v);
+    else if (f === 'yes_text' || f === 'no_text' || f === 'scale_definition_text') c[f] = v;
     else if (f === 'weight') c.weight = v === '' ? '' : Number(v);
     else if (f === 'scale_min' || f === 'scale_max') c.scale = { min: c.scale?.min ?? 0, max: c.scale?.max ?? 5, [f === 'scale_min' ? 'min' : 'max']: v === '' ? '' : Number(v) };
     else if (f === 'answer_type' || f === 'na_allowed') {
       c[f] = v;
-      if (f === 'answer_type') { if (v === 'flag') { c.weight = 0; c.gross = true; } else if (c.gross && !c.builtin) c.gross = false; c.scale = v === 'scale' ? (c.scale || { min: 0, max: 5 }) : null; }
+      if (f === 'answer_type') { if (v === 'flag') { c.weight = 0; c.gross = true; c.na_allowed = false; } else if (c.gross && !c.builtin) c.gross = false; c.scale = v === 'scale' ? (c.scale || { min: 0, max: 5 }) : null; }
       dirty = true; const st = { y: scrollY }; const idx = fs.dataset.i; render(); scrollTo(0, st.y); body.querySelector(`.ce[data-i="${idx}"] [data-f="${f}"]`)?.focus(); return;
     }
     dirty = true; refreshStatus();

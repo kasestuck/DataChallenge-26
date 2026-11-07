@@ -76,7 +76,10 @@ class EvaluationRequest(RequestModel):
 
 class BatchRequest(RequestModel):
     conversation_ids: list[str] | None = Field(default=None, min_length=1, examples=[["p1-ru-001", "p1-kz-001"]])
-    all: bool = Field(default=False, description="Все диалоги, находящиеся в БД на момент запуска.")
+    all: bool = Field(default=False, description="Все диалоги выбранной группы. Без dataset_group_id пользовательские UPLOAD исключаются.")
+    dataset_group_id: str | None = Field(default=None, min_length=1, pattern=r"\S",
+                                        description="Фильтр источника только для all=true. UPLOAD нужно выбрать явно.",
+                                        examples=["DEV", "UPLOAD"])
     checklist_version_id: str | None = None
     output_language: OutputLanguage = "ru"
     force: bool = Field(default=False, description="Повторно оценить уже завершённые пары диалог/версия.")
@@ -86,6 +89,8 @@ class BatchRequest(RequestModel):
     def exclusive_selection(self):
         if self.all == (self.conversation_ids is not None):
             raise ValueError("Укажите либо conversation_ids, либо all=true.")
+        if self.dataset_group_id is not None and not self.all:
+            raise ValueError("dataset_group_id применяется только вместе с all=true; conversation_ids уже задаёт явный выбор.")
         for name in ("conversation_ids", "criterion_ids"):
             values = getattr(self, name)
             if values is not None and (any(not item.strip() for item in values) or len(values) != len(set(values))):
@@ -140,6 +145,7 @@ class EvaluationResponse(PublicModel):
 
 class ConversationListItem(PublicModel):
     conversation_id: str
+    dataset_group_id: str | None = Field(default=None, description="Источник: группа организаторов либо UPLOAD для пользовательского импорта.")
     language: Language
     channel: Channel
     total: str | None = None
@@ -153,6 +159,7 @@ class ConversationListItem(PublicModel):
 
 class ConversationResponse(PublicModel):
     conversation_id: str
+    dataset_group_id: str | None = Field(default=None, description="Источник: группа организаторов либо UPLOAD для пользовательского импорта.")
     channel: Channel
     language: Language
     audio_url: str | None = None

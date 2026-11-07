@@ -1,7 +1,7 @@
 // Operator Intelligence: список операторов (сортировка по среднему баллу, числу оценок, нарушениям, апелляциям)
 // и профиль оператора (динамика качества, сильные/слабые критерии, история диалогов и апелляций).
 // Ссылки на профиль строятся только по operator_id, пришедшему из Backend. Если его нет — оператор не выдумывается:
-// диалог можно привязать вручную в карточке диалога. В статистику попадают только завершённые оценки.
+// Ручная привязка доступна только в демо. Реальный источник пока не содержит operator_id.
 import { t, applyDom } from '../../../src/i18n/index.js';
 import { getMode, getApiBase, setMode, isAbort, getOperators, getOperator } from '../../api.js';
 import { esc, icon, num, loc, langTag, statusBadge, scoreIndicator, scoreBadge, grossBadge, dayLabel, dateTime, lineChart, errorState, emptyState, mockBanner, loadingState } from '../ui.js';
@@ -12,8 +12,15 @@ const href = (id) => `#/dashboard/operators/${encodeURIComponent(id)}`;
 const quality = (avg) => (avg == null ? 'none' : avg >= 85 ? 'high' : avg >= 70 ? 'mid' : 'low');
 const qualityChip = (avg) => `<span class="qual qual--${quality(avg)}">${esc(t(`ws.opr.q.${quality(avg)}`))}</span>`;
 
+function sourceUnavailable(root) {
+  const render = () => { root.innerHTML = emptyState(t('ws.contract.operatorsTitle'), t('ws.contract.operatorsText')); };
+  render();
+  return { relang: render, destroy() { root.replaceChildren(); } };
+}
+
 // ======================= список =======================
 export function mountOperators(root, ctx) {
+  if (getMode() === 'api') return sourceUnavailable(root);
   return mountList(root, ctx, {
     titleKey: 'ws.nav.operators', searchKey: 'ws.opr.search', sort: { key: 'avg_score', order: 'desc' }, pageSize: 25,
     fetch: getOperators,
@@ -35,6 +42,7 @@ export function mountOperators(root, ctx) {
 
 // ======================= профиль =======================
 export function mountOperator(root, ctx) {
+  if (getMode() === 'api') return sourceUnavailable(root);
   const id = ctx.id;
   let d = null, err = null, ac = new AbortController();
   root.innerHTML = `<div class="cd"><a class="back" href="#/dashboard/operators">${icon('arrow-left')}<span data-i18n="ws.opr.back"></span></a><div data-body>${loadingState(4)}</div></div>`;

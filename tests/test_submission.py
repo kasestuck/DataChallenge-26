@@ -88,6 +88,22 @@ def test_export_complete_group_is_read_only_and_uses_actual_stored_model(databas
     assert validate_submission(payload, expected_ids=meta["expected_ids"], transcript_lengths=meta["transcript_lengths"])
 
 
+def test_dev_export_excludes_uploads_and_retains_exactly_65_records(database):
+    dev = [record(f"synthetic-dev-{i:02d}", "agent chat" if i < 60 else "voice call") for i in range(65)]
+    import_records(database, "DEV", dev)
+    import_records(database, "UPLOAD", [record("synthetic-user-upload")])
+    for item in dev:
+        store_evaluation(database, item["conversation_id"])
+    store_evaluation(database, "synthetic-user-upload")
+    before = database.total_changes
+    payload, meta = build_submission(database, group_id="DEV", split="dev", team_name="Synthetic Team")
+    assert database.total_changes == before
+    assert meta["counts"] == {"ok": 65, "error": 0}
+    assert len(payload["results"]) == 65
+    assert {item["conversation_id"] for item in payload["results"]} == {item["conversation_id"] for item in dev}
+    assert "synthetic-user-upload" not in meta["expected_ids"]
+
+
 def test_scale_is_raw_integer_na_is_null_and_critical_does_not_zero_score(database):
     store_evaluation(database, "synthetic-0", overrides={"02": "na", "03": "na", "04": "15", "06": "7", "08": "yes"})
     payload, _ = build(database)

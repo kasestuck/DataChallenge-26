@@ -3,6 +3,7 @@
 import { t, applyDom } from '../../../src/i18n/index.js';
 import { getOverview, getMode, getApiBase, setMode, isAbort } from '../../api.js';
 import { esc, icon, num, band, scoreBadge, chip, langTag, shortDate, dayLabel, loadingState, emptyState, errorState, lineChart } from '../ui.js';
+import { usageSummary } from './usage.js';
 
 const tr = (key, fallback) => { const v = t(key); return v === key ? fallback : v; };
 const link = (section) => `#/dashboard/${section}`;
@@ -76,7 +77,7 @@ export function mountOverview(root, ctx) {
     const b = data.score_distribution || [];
     const max = Math.max(1, ...b.map((x) => x.count));
     const body = b.length
-      ? `<ul class="bars">${b.map((x) => `<li class="bar bar--${band(x.max)}"><span class="bar__n">${esc(num(x.count))}</span><span class="bar__track"><i style="height:${Math.max(2, Math.round((x.count / max) * 100))}%"></i></span><span class="bar__l">${x.min}–${x.max}</span></li>`).join('')}</ul>`
+      ? `<ul class="bars">${b.map((x) => `<li class="bar bar--${band(x.max)}"><span class="bar__n">${esc(num(x.count))}</span><span class="bar__track"><i style="height:${Math.max(2, Math.round((x.count / max) * 100))}%"></i></span><span class="bar__l">${x.min}–${x.upper_inclusive === false ? '&lt;' : ''}${x.max}</span></li>`).join('')}</ul>`
       : `<p class="muted">${esc(t('ws.ov.chart.noData'))}</p>`;
     return `<section class="panel panel--dist"><header><h2>${esc(t('ws.ov.chart.distribution'))}</h2><p>${esc(t('ws.ov.chart.distNote'))}</p></header>${body}</section>`;
   };
@@ -95,15 +96,31 @@ export function mountOverview(root, ctx) {
   const listPanel = (cls, title, section, kind) => `<section class="panel panel--${cls}"><header class="panel__head"><h2>${esc(title)}</h2>
     <a class="more" href="${link(section)}">${esc(t('ws.ov.recent.all'))} ${icon('arrow')}</a></header><div class="rows" data-list="${kind}"></div></section>`;
 
+  const realSummary = () => {
+    const k = data.kpis;
+    const rows = ['total_count', 'not_evaluated_count', 'needs_review_count', 'failed_count', 'running_count', 'stale_count', 'median_score'];
+    return `<section class="panel"><header><h2>${esc(t('ws.contract.summary'))}</h2><p>${esc(t('ws.contract.allTime'))}</p></header>
+      <dl class="cd__meta">${rows.map((key) => `<div><dt>${esc(t(`ws.contract.${key}`))}</dt><dd>${esc(num(k[key], key === 'median_score' ? 2 : 0))}</dd></div>`).join('')}</dl>
+      <p class="form-hint">${esc(t('ws.contract.scoreBasis', { n: num(k.scored_count) }))}</p>
+      <p class="form-hint">${esc(t('ws.contract.noTrend'))}</p>
+      <h3>${esc(t('ws.contract.allCalls'))}</h3>${usageSummary(data.cost)}</section>`;
+  };
+
+  const channelPanel = () => `<section class="panel"><header><h2>${esc(t('ws.contract.channels'))}</h2></header><ul class="langs">${(data.by_channel || []).map((row) => `<li><span class="langs__name">${esc(tr(`ws.channel.${row.channel}`, row.channel))}</span><span class="langs__n">${esc(t('ws.ov.chart.count', { n: num(row.count) }))}</span><span class="langs__avg">${esc(t('ws.ov.chart.avgShort', { n: num(row.avg_score, 1) }))}</span></li>`).join('')}</ul></section>`;
+
   function render() {
     if (err) {
       content.innerHTML = errorState(err, { mode: getMode(), base: getApiBase() });
       return;
     }
     banner.hidden = data.meta?.source !== 'mock';
+    const real = data.meta?.source === 'api';
+    $('.seg').hidden = data.meta?.period_supported === false;
+    $('.seg').style.display = data.meta?.period_supported === false ? 'none' : '';
+    $('.ov__sub').textContent = t(real ? 'ws.contract.allTime' : 'ws.ov.subtitle');
     stamp.textContent = t('ws.state.updated', { time: clock(updatedAt) });
     const k = data.kpis || {};
-    if (!k.evaluated_count) {
+    if (!k.evaluated_count && !real) {
       content.innerHTML = emptyState(t('ws.state.emptyTitle'), t('ws.state.emptyText'));
       return;
     }
@@ -115,8 +132,8 @@ export function mountOverview(root, ctx) {
         ${kpiCard({ key: 'appeals', ico: 'quote', value: num(k.pending_appeals_count), href: `${link('appeals')}?status=pending`, tone: k.pending_appeals_count > 0 ? 'wk-kpi--warn' : '' })}
       </div>
       <div class="ov__grid">
-        <div class="ov__col">${trendPanel()}${listPanel('conv', t('ws.ov.recent.conversations'), 'conversations', 'conv')}</div>
-        <div class="ov__col">${distPanel()}${langPanel()}${listPanel('appeals', t('ws.ov.recent.appeals'), 'appeals', 'appeals')}</div>
+        <div class="ov__col">${real ? realSummary() : trendPanel()}${listPanel('conv', t('ws.ov.recent.conversations'), 'conversations', 'conv')}</div>
+        <div class="ov__col">${distPanel()}${langPanel()}${real ? channelPanel() : ''}${listPanel('appeals', t('ws.ov.recent.appeals'), 'appeals', 'appeals')}</div>
       </div>`;
     fillLists();
   }
@@ -127,7 +144,7 @@ export function mountOverview(root, ctx) {
     if (!data || err) return;
     const convEl = $('[data-list="conv"]'), apEl = $('[data-list="appeals"]');
     if (!convEl || !apEl) return;
-    const op = (id) => (id ? esc(id) : `<em class="muted">${esc(t('ws.unassigned'))}</em>`);
+    const op = (id) => (id ? esc(id) : `<em class="muted">${esc(t(data.meta?.source === 'api' ? 'ws.contract.operatorMissing' : 'ws.unassigned'))}</em>`);
     const conv = (data.recent_conversations || []).filter((c) => match(c.id, c.operator_id));
     const aps = (data.recent_appeals || []).filter((a) => match(a.id, a.conversation_id, a.operator_id));
     const none = (msg) => `<p class="rows__empty">${esc(q ? t('ws.ov.recent.noMatch', { q }) : msg)}</p>`;
@@ -135,7 +152,7 @@ export function mountOverview(root, ctx) {
         <span class="row__id">${esc(c.id)}</span>${langTag(c.language)}
         <span class="row__meta">${esc(tr(`ws.channel.${c.channel}`, c.channel))}</span>
         <span class="row__op">${op(c.operator_id)}</span>${scoreBadge(c.score)}
-        ${chip(c.status, tr(`ws.status.conv.${c.status}`, c.status))}<time class="row__date" datetime="${esc(c.evaluated_at)}">${esc(shortDate(c.evaluated_at))}</time></a>`).join('')
+        ${chip(c.status, tr(`ws.status.conv.${c.status}`, c.status))}${c.evaluated_at ? `<time class="row__date" datetime="${esc(c.evaluated_at)}">${esc(shortDate(c.evaluated_at))}</time>` : ''}</a>`).join('')
       : none(t('ws.ov.recent.emptyConv'));
     apEl.innerHTML = aps.length ? aps.map((a) => `<a class="row row--appeal" href="${link(`appeals/${encodeURIComponent(a.id)}`)}">
         <span class="row__id">${esc(a.conversation_id)}</span>

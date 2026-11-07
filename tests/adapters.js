@@ -64,14 +64,14 @@ await test('mappers: checklist → POST body (round-trip)', () => {
   const base = real.mapChecklist(CL_RAW, 'v1');
   const body = { base_version: 1, note: 'n', criteria: base.criteria.map((c) => ({ ...c })) };
   const r = real.toChecklistRequest(body, base);
-  eq([r.name, r.checklist_id, r.sections.length, r.criteria.length], ['Freedom', 'freedom-broker', 2, 3], 'имя/семейство/секции сохраняются');
+  eq([r.name, r.checklist_id, r.sections.length, r.criteria.length], ['Freedom', 'freedom-broker', 2, 4], 'имя/семейство/секции и неактивный критерий сохраняются');
   eq(r.criteria[0].yes_text, 'да', 'yes_text берётся из исходного критерия');
   eq(r.criteria[1].scale, { 10: 'a', 7: 'b', 4: 'c', 0: 'd' }, 'нетронутая шкала не пересоздаётся (описания не теряются)');
   eq([r.criteria[1].allow_na, r.criteria[1].na_condition], [true, 'нет запроса'], 'N/A и условие');
   eq([r.criteria[2].weight, r.criteria[2].scored, r.criteria[2].allow_na, r.criteria[2].section], [0, false, false, 's4'], 'flag: вес 0, не оценивается, секция сохранена');
-  body.criteria[1].scale = { min: 0, max: 3 };
+  body.criteria[1].scale_definition = { 0: 'Нет ответа', 3: 'Ответ полный' };
   const r2 = real.toChecklistRequest(body, base);
-  eq(Object.keys(r2.criteria[1].scale), ['0', '1', '2', '3'], 'изменённая шкала генерируется по диапазону');
+  eq(r2.criteria[1].scale, { 0: 'Нет ответа', 3: 'Ответ полный' }, 'новая шкала сохраняет точные ступени и описания');
   body.criteria.push({ id: 'x1', name: { ru: 'Новый', kk: '', en: '' }, description: 'описание', weight: 0, answer_type: 'yes_no', scale: null, na_allowed: false, na_condition: '', gross: false });
   const r3 = real.toChecklistRequest(body, base);
   const n = r3.criteria[3];
@@ -83,7 +83,7 @@ await test('mappers: evaluation (баллы только из Backend)', () => {
   eq([ev.id, ev.status, ev.checklist_version, ev.total_score, ev.final_total_score], ['e1', 'done', 1, 70, 81.25], 'original_total и final_total берутся как есть');
   const [c1, c6, c8, c3, c5] = ev.criteria;
   eq([c1.answer, c1.score, c1.weight, c1.evidence[0].message_id], [true, 40, 40, 'm2'], 'yes_no: ответ, points, effective_weight, evidence');
-  eq([c6.answer, c6.score, c6.revised?.score, c6.weight, c6.original_answer], [10, 7.5, 41.25, 60, '4'], 'решение проверяющего: исходный балл сохранён, итоговый отдельно');
+  eq([c6.answer, c6.score, c6.revised?.score, c6.weight, c6.original_answer, c6.original_score], [10, 41.25, 41.25, 60, '4', 7.5], 'ответ и балл согласованы после решения, исходный балл сохранён отдельно');
   check(c6.scale && c6.scale.max === 10 && c6.scale_keys.length === 4, 'шкала из чек-листа');
   check(c8.gross === false && c8.answer === false, 'flag без нарушения');
   check(c3.na && c3.na.reason === 'нет вопроса' && c3.score === null && c3.answer === null, 'N/A с причиной');
@@ -130,7 +130,7 @@ await test('facade: режимы и честные ограничения', asyn
   api.setMode('api');
   await rejects(api.getConversations({}), (e) => e.kind === 'network', 'api + Backend недоступен → network (мок НЕ подставляется)');
   await rejects(api.getOperators({}), (e) => e.kind === 'unsupported', 'операторы: unsupported');
-  await rejects(api.getOverview({}), (e) => e.kind === 'unsupported', 'overview: unsupported');
+  await rejects(api.getOverview({}), (e) => e.kind === 'network', 'overview: ошибка Backend не подменяется демо-данными');
   await rejects(api.assignOperator('x', 'OP-1'), (e) => e.kind === 'unsupported', 'ручная привязка: unsupported');
   delete window.CQA_API_BASE;
   api.setMode('demo');
@@ -141,7 +141,7 @@ await test('facade: режимы и честные ограничения', asyn
 });
 
 if (live) {
-  window.CQA_API_BASE = 'http://localhost:8001/api';
+  window.CQA_API_BASE = new URLSearchParams(location.search).get('api_base') || `${location.origin}/api`;
   api.setMode('api');
   const id = `fe-live-${Date.now().toString(36)}`;
   await test('LIVE: health и ошибки Backend', async () => {

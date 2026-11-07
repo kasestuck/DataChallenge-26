@@ -8,13 +8,16 @@ import { confirmDialog, toast } from '../overlay.js';
 
 const href = (id) => `#/dashboard/appeals/${encodeURIComponent(id)}`;
 const short = (s, n = 70) => (String(s).length > n ? `${String(s).slice(0, n).trimEnd()}…` : String(s));
+const scoreText = (answer, score, weight) => answer === 'na' ? t('ws.crit.na') : `${num(score, getMode() === 'api' ? 2 : 1)} / ${num(weight, getMode() === 'api' ? 2 : 0)}`;
+const originalScore = (a) => scoreText(a.original_answer, a.original_score, a.max_score);
 
 // Реальный Backend принимает не «новый балл», а новый ОТВЕТ по критерию (yes/no или ключ шкалы); баллы считает сам Backend.
 function newValueField(a) {
   const c = a.criterion;
   if (c?.answer_key == null) return `<label class="field" data-newscore><span>${esc(t('ws.apl.newScore'))} (0–${esc(num(a.max_score))})</span><input type="number" name="new_score" min="0" max="${esc(a.max_score)}" step="0.5" value="${esc(a.original_score)}" inputmode="decimal"></label>`;
   const keys = c.answer_type === 'scale' ? [...(c.scale_keys || [])].sort((x, y) => Number(y) - Number(x)) : ['yes', 'no'];
-  const label = (k) => (c.answer_type === 'scale' ? k : t(k === 'yes' ? 'ws.ans.yes' : 'ws.ans.no'));
+  if (c.allow_na && c.answer_type !== 'flag') keys.push('na');
+  const label = (k) => (k === 'na' ? t('ws.crit.na') : c.answer_type === 'scale' ? k : t(k === 'yes' ? 'ws.ans.yes' : 'ws.ans.no'));
   return `<label class="field" data-newscore><span>${esc(t('ws.apl.finalAnswer'))}</span><select name="final_answer">${keys.map((k) => `<option value="${esc(k)}"${k === c.answer_key ? ' selected' : ''}>${esc(label(k))}</option>`).join('')}</select></label>`;
 }
 
@@ -30,7 +33,7 @@ export function mountAppeals(root, ctx) {
       { label: t('ws.apl.colId'), render: (a) => `<a class="row__id" href="${href(a.id)}">${esc(a.id)}</a>` },
       { label: t('ws.evl.colDialog'), render: (a) => `<a href="#/dashboard/conversations/${encodeURIComponent(a.conversation_id)}">${esc(a.conversation_id)}</a>` },
       { label: t('ws.apl.criterion'), render: (a) => esc(loc(a.criterion_name)) },
-      { label: t('ws.apl.origShort'), sortKey: 'original_score', cls: 'num', render: (a) => `${esc(num(a.original_score, 1))} / ${esc(num(a.max_score))}` },
+      { label: t('ws.apl.origShort'), sortKey: 'original_score', cls: 'num', render: (a) => esc(originalScore(a)) },
       { label: t('ws.col.status'), sortKey: 'status', render: (a) => statusBadge('appeal', a.status) },
       { label: t('ws.apl.comment'), render: (a) => `<span class="cut" title="${esc(a.comment)}">${esc(short(a.comment))}</span>` },
       { label: t('ws.col.date'), sortKey: 'created_at', render: (a) => `<time datetime="${esc(a.created_at)}">${esc(dateTime(a.created_at))}</time>` },
@@ -60,7 +63,7 @@ export function mountAppealDetail(root, ctx) {
       return;
     }
     ctx.setTitle(`${t('ws.nav.appeals')} · ${a.id}`);
-    const c = a.criterion;
+    const c = a.disputed_criterion || a.criterion;
     const dec = a.decision;
     const ev = c?.evidence?.length
       ? `<ul class="crit__evid">${c.evidence.map((e) => `<li>${evidenceLink(a.conversation_id, e, e.quote)}</li>`).join('')}</ul>`
@@ -77,19 +80,19 @@ export function mountAppealDetail(root, ctx) {
           <dl class="kv"><div><dt>${esc(t('ws.col.status'))}</dt><dd>${statusBadge('appeal', a.status)}</dd></div>
           <div><dt>${esc(t('ws.apl.reviewer'))}</dt><dd>${esc(dec?.reviewer || '—')}</dd></div>
           <div><dt>${esc(t('ws.apl.decidedAt'))}</dt><dd>${esc(dec?.decided_at ? dateTime(dec.decided_at) : '—')}</dd></div>
-          <div><dt>${esc(t('ws.apl.origShort'))}</dt><dd>${esc(num(a.original_score, 1))} / ${esc(num(a.max_score))}</dd></div>
-          <div><dt>${esc(t('ws.apl.newScoreShort'))}</dt><dd>${dec?.new_score != null ? `<b>${esc(num(dec.new_score, 1))}</b> / ${esc(num(a.max_score))}` : esc(t('ws.apl.unchanged'))}</dd></div></dl>
+          <div><dt>${esc(t('ws.apl.origShort'))}</dt><dd>${esc(originalScore(a))}</dd></div>
+          <div><dt>${esc(t('ws.apl.newScoreShort'))}</dt><dd>${dec?.new_answer === 'na' || dec?.new_score != null ? `<b>${esc(scoreText(dec.new_answer, dec.new_score, a.final_max_score ?? a.max_score))}</b>` : esc(t('ws.apl.unchanged'))}</dd></div></dl>
           <p class="orig__exp"><b>${esc(t('ws.apl.reason'))}:</b> ${esc(dec?.reason || '—')}</p></section>`;
     body.innerHTML = `<div class="cd__head"><div class="cd__id"><h2>${esc(a.id)}</h2>${statusBadge('appeal', a.status)}</div>
         <dl class="cd__meta"><div><dt>${esc(t('ws.evl.colDialog'))}</dt><dd><a href="#/dashboard/conversations/${encodeURIComponent(a.conversation_id)}">${esc(a.conversation_id)}</a></dd></div>
         <div><dt>${esc(t('ws.evl.colId'))}</dt><dd><a href="#/dashboard/evaluations/${encodeURIComponent(a.evaluation_id)}">${esc(a.evaluation_id)}</a></dd></div>
-        <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${opCell(a.operator_id)}</dd></div>
+        <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${getMode() === 'api' ? esc(t('ws.contract.operatorMissing')) : opCell(a.operator_id)}</dd></div>
         <div><dt>${esc(t('ws.col.date'))}</dt><dd>${esc(dateTime(a.created_at))}</dd></div></dl></div>
       ${a.meta?.source === 'mock' ? mockBanner() : ''}
       <div class="opr__grid">
         <section class="panel"><header><h2>${esc(t('ws.apl.originalTitle'))}</h2></header>
           <h3 class="sub">${esc(loc(a.criterion_name))}</h3>
-          <dl class="kv"><div><dt>${esc(t('ws.apl.origShort'))}</dt><dd><b>${esc(num(a.original_score, 1))}</b> / ${esc(num(a.max_score))}</dd></div>
+          <dl class="kv"><div><dt>${esc(t('ws.apl.origShort'))}</dt><dd><b>${esc(originalScore(a))}</b></dd></div>
             <div><dt>${esc(t('ws.eval.total'))}</dt><dd>${esc(num(a.original_total_score))}${a.final_total_score != null && a.final_total_score !== a.original_total_score ? ` → <b>${esc(num(a.final_total_score))}</b>` : ''}</dd></div></dl>
           ${c?.explanation ? `<p class="orig__exp">${esc(c.explanation)}</p>` : ''}${ev}
           ${c?.gross ? `<p>${grossBadge()}</p>` : ''}</section>
@@ -120,7 +123,7 @@ export function mountAppealDetail(root, ctx) {
       render();
     } catch (x) {
       if (isAbort(x)) return;
-      fail(x.kind === 'http' && x.status === 409 ? t('ws.apl.alreadyDecided') : errorText(x, getApiBase()));
+      fail(errorText(x, getApiBase()));
       form.querySelector('[data-submit]').disabled = false;
     } finally { busy = false; }
   }

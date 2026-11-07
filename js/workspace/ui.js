@@ -21,7 +21,7 @@ export const clock = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d
 export const dateTime = (iso) => { if (iso == null || iso === '') return '—'; const d = new Date(iso); return Number.isNaN(+d) ? '—' : `${formatDate(d, { day: 'numeric', month: 'short' })} ${clock(d)}`; };
 
 export const chip = (kind, label) => `<span class="chip chip--${esc(kind)}">${esc(label)}</span>`;
-export const langTag = (l) => `<span class="ltag" lang="${esc(l)}">${esc(String(l).toUpperCase())}</span>`;
+export const langTag = (l) => l == null || l === '' ? '<span class="muted">—</span>' : `<span class="ltag" lang="${esc(l)}">${esc(String(l).toUpperCase())}</span>`;
 export const opCell = (id) => (id ? esc(id) : `<em class="muted">${esc(t('ws.unassigned'))}</em>`);
 
 // ---------- StatusBadge / ScoreIndicator ----------
@@ -74,14 +74,16 @@ export function errorText(err, base = '') {
   if (err?.kind === 'unsupported') return t('ws.state.unsupported', { what: err.detail || '' });
   if (err?.kind === 'http') {
     const key = { 404: 'ws.state.notFound', 409: 'ws.state.conflict', 422: 'ws.state.invalid', 503: 'ws.state.aiDown', 502: 'ws.state.modelDown', 429: 'ws.state.modelDown', 504: 'ws.state.modelDown' }[err.status];
-    return key ? t(key) : t('ws.state.errorHttp', { code: err.status });
+    const summary = key ? t(key) : t('ws.state.errorHttp', { code: err.status });
+    return `${summary}${err.code ? ` [${err.code}]` : ''}${err.detail && err.detail !== summary ? ` ${err.detail}` : ''}`;
   }
   if (err?.kind === 'timeout') return t('ws.state.errorTimeout', { url: base });
   return t('ws.state.errorText', { url: base });
 }
 export function errorState(err, { mode, base }, { retry = true } = {}) {
-  return `<div class="state state--error" role="alert">${icon('alert', 'ico--lg')}<h3>${esc(t('ws.state.errorTitle'))}</h3><p>${esc(errorText(err, base))}</p>
-    ${err?.detail ? `<p class="state__detail">${esc(err.detail)}</p>` : ''}
+  const message = errorText(err, base);
+  return `<div class="state state--error" role="alert">${icon('alert', 'ico--lg')}<h3>${esc(t('ws.state.errorTitle'))}</h3><p>${esc(message)}</p>
+    ${err?.detail && !message.includes(String(err.detail)) ? `<p class="state__detail">${esc(err.detail)}</p>` : ''}
     <div class="state__actions">${retry ? `<button class="btn" type="button" data-act="retry">${esc(t('ws.state.retry'))}</button>` : ''}
     ${mode === 'api' ? `<button class="btn btn--ghost" type="button" data-act="to-demo">${esc(t('ws.mode.toDemo'))}</button>` : ''}</div></div>`;
 }
@@ -95,6 +97,7 @@ export function evidenceLink(conversationId, ev, text) {
 
 // ---------- CriteriaCard ----------
 export function answerText(c) {
+  if (c.invalid || (c.answer == null && !c.na)) return t('ws.contract.unknown');
   if (c.na) return t('ws.crit.na');
   if (c.answer_type === 'flag') return c.answer ? t('ws.crit.violation') : t('ws.crit.noViolation');
   if (c.answer_type === 'yes_no') return c.answer ? t('ws.ans.yes') : t('ws.ans.no');
@@ -102,20 +105,22 @@ export function answerText(c) {
 }
 // opts: { conversationId, appeal: bool, appealed: Set<criterion_id> (уже оспорено/ожидает), showScore }
 export function criteriaCard(c, opts = {}) {
-  const rev = c.revised ? `<p class="crit__rev">${icon('check-circle')}${esc(t('ws.crit.revised', { score: num(c.revised.score, 1) }))}</p>` : '';
-  const evid = c.na ? '' : c.evidence?.length
+  const pointDigits = c.answer_key !== undefined ? 2 : 1;
+  const weightDigits = c.answer_key !== undefined ? 2 : 0;
+  const rev = c.revised ? `<p class="crit__rev">${icon('check-circle')}${esc(t('ws.crit.revised', { score: c.revised.answer === 'na' ? t('ws.crit.na') : num(c.revised.score, pointDigits) }))}</p>` : '';
+  const evid = c.evidence?.length
     ? `<ul class="crit__evid">${c.evidence.map((e) => `<li>${evidenceLink(opts.conversationId, e, e.quote)}</li>`).join('')}</ul>`
     : `<p class="crit__noev">${esc(t('ws.crit.noEvidence'))}</p>`;
-  const appealBtn = opts.appeal && !c.na
+  const appealBtn = opts.appeal && !c.invalid && (c.answer_key != null || (!c.na && c.answer != null))
     ? (opts.appealed?.has(c.criterion_id)
       ? `<button class="btn btn--ghost btn--sm" type="button" disabled title="${esc(t('ws.appeal.alreadyTip'))}">${esc(t('ws.appeal.exists'))}</button>`
       : `<button class="btn btn--ghost btn--sm" type="button" data-appeal="${esc(c.criterion_id)}">${esc(t('ws.appeal.open'))}</button>`) : '';
   return `<article class="crit${c.gross ? ' crit--gross' : ''}${c.na ? ' crit--na' : ''}" data-criterion="${esc(c.criterion_id)}">
     <header class="crit__head"><h4>${esc(loc(c.name))}</h4>
-      <span class="crit__pills"><span class="pill" title="${esc(t('ws.crit.weight'))}">${esc(t('ws.crit.weightN', { n: num(c.weight) }))}</span><span class="pill pill--type">${esc(tr(`ws.atype.${c.answer_type}`, c.answer_type))}</span>${c.gross ? grossBadge() : ''}</span></header>
+      <span class="crit__pills"><span class="pill" title="${esc(t('ws.crit.weight'))}">${esc(t('ws.crit.weightN', { n: num(c.weight, weightDigits) }))}</span><span class="pill pill--type">${esc(tr(`ws.atype.${c.answer_type}`, c.answer_type))}</span>${c.gross ? grossBadge() : ''}</span></header>
     ${c.description ? `<p class="crit__desc">${esc(loc(c.description))}</p>` : ''}
     <div class="crit__res"><span class="crit__ans">${esc(t('ws.crit.answer'))}: <b>${esc(answerText(c))}</b></span>
-      ${c.na ? '' : `<span class="crit__pts">${esc(t('ws.crit.points'))}: <b>${c.answer_type === 'flag' ? '—' : `${esc(num(c.score, 1))} / ${esc(num(c.weight))}`}</b></span>`}</div>
+      ${c.na ? '' : `<span class="crit__pts">${esc(t('ws.crit.points'))}: <b>${c.answer_type === 'flag' ? '—' : `${esc(num(c.score, pointDigits))} / ${esc(num(c.weight, weightDigits))}`}</b></span>`}</div>
     ${c.na ? `<p class="crit__na">${chip('na', t('ws.crit.na'))} ${esc(t('ws.crit.naReason'))}: ${esc(c.na.reason)}</p>` : `<p class="crit__exp">${esc(c.explanation)}</p>`}
     ${evid}${rev}${appealBtn ? `<footer class="crit__foot">${appealBtn}</footer>` : ''}</article>`;
 }

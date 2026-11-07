@@ -9,7 +9,7 @@ const label = (l) => (l.startsWith('ws.') ? t(l) : l);
 
 /* cfg: {
      titleKey, fetch(params, {signal}), columns(): [...], rowHref(item), sort: {key, order}, pageSize,
-     filters: [{ name, labelKey, options: [[value, labelKeyOrText], ...] }], searchKey, searchLabelKey,
+     filters: [{ name, labelKey, options: [[value, labelKeyOrText], ...] | (data, selected) => options }], searchKey, searchLabelKey,
      toolbarExtra?(): html, summary?(data): html, onClick?(e, api): void, emptyKeys: {title, text}, tableLabelKey } */
 export function mountList(root, ctx, cfg) {
   const P = (n) => ctx.query.get(n) || '';
@@ -22,13 +22,14 @@ export function mountList(root, ctx, cfg) {
   const body = $('[data-body]'), banner = $('[data-banner]'), bar = $('[data-toolbar]');
 
   const hasFilters = () => !!st.q || cfg.filters.some((f) => st.f[f.name]);
+  const filterOptions = (f) => typeof f.options === 'function' ? f.options(data, st.f[f.name]) : f.options;
   const syncUrl = () => ctx.setQuery({
     q: st.q, page: st.page > 1 ? st.page : '', ...(st.sort !== cfg.sort.key || st.order !== cfg.sort.order ? { sort: st.sort, order: st.order } : {}), ...st.f,
   });
 
   function renderToolbar() {
     bar.innerHTML = `${searchInput({ value: st.q, placeholder: t(cfg.searchKey), label: t(cfg.searchLabelKey || 'ws.top.searchLabel') })}
-      ${cfg.filters.map((f) => filterSelect({ name: f.name, value: st.f[f.name], label: t(f.labelKey), options: f.options.map(([v, l]) => [v, label(l)]) })).join('')}
+      ${cfg.filters.map((f) => filterSelect({ name: f.name, value: st.f[f.name], label: t(f.labelKey), options: filterOptions(f).map(([v, l]) => [v, label(l)]) })).join('')}
       ${cfg.toolbarExtra ? `<div class="lp__extra">${cfg.toolbarExtra()}</div>` : ''}`;
   }
 
@@ -43,6 +44,11 @@ export function mountList(root, ctx, cfg) {
       const res = await cfg.fetch(params, { signal: mine.signal });
       if (mine.signal.aborted) return;
       data = res; err = null;
+      // Update only dynamic selects: leave the search field and its focus intact.
+      cfg.filters.filter((f) => typeof f.options === 'function').forEach((f) => {
+        const select = bar.querySelector(`[data-filter="${f.name}"]`);
+        if (select) select.innerHTML = filterOptions(f).map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(st.f[f.name]) ? ' selected' : ''}>${esc(label(l))}</option>`).join('');
+      });
     } catch (e) {
       if (isAbort(e)) return;
       data = null; err = e;

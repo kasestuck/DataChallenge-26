@@ -2,7 +2,7 @@
 //
 // Режимы (индикатор в шапке Workspace, localStorage["cqa-api-mode"]):
 //   demo — Mock Adapter (js/mockAdapter.js): вымышленные данные, в UI всегда помечены «Демо»;
-//   api  — Real API Adapter (js/realApiAdapter.js): настоящий Backend (js/config.js: база по умолчанию http://localhost:8001/api).
+//   api  — Real API Adapter (js/realApiAdapter.js): настоящий Backend, по умолчанию /api на том же origin.
 // В режиме api ошибки НИКОГДА не маскируются моками: UI показывает состояние ошибки или «не поддерживается Backend».
 // Контракт: docs/api-contract.md, интеграция: docs/backend-integration.md.
 import { MODE_KEY, DEFAULT_API_BASE, getApiBase } from './config.js';
@@ -33,6 +33,7 @@ export const getConversations = (p, o) => A().getConversations(p, o);
 export const getConversation = (id, o) => A().getConversation(id, o);
 export const assignOperator = (id, op, o) => A().assignOperator(id, op, o);
 export const importConversations = (b, o) => A().importConversations(b, o);
+export const getImportRecords = (b) => realAdapter.getImportRecords(b);
 export const getEvaluations = (p, o) => A().getEvaluations(p, o);
 export const getEvaluation = (id, o) => A().getEvaluation(id, o);
 export const runEvaluation = (b, o) => A().runEvaluation(b, o);

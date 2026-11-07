@@ -182,7 +182,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     @application.post("/api/conversations/upload", response_model=UploadResponse, status_code=201,
                       tags=["Conversations"], summary="Загрузить одиночный диалог",
                       description="JSON с transcript (массив или role: text) либо text/plain. Для text/plain метаданные передаются в query; "
-                                  "время неизвестных реплик сохраняется пустой строкой. Существующий conversation_id обновляется идемпотентно.",
+                                  "время неизвестных реплик сохраняется пустой строкой. Источник всегда UPLOAD; повторный ID обновляется "
+                                  "только внутри UPLOAD. ID из другого набора возвращает 409 UPLOAD_ID_CONFLICT без изменений.",
                       openapi_extra={"requestBody": {"content": {"text/plain": {"schema": {"type": "string"},
                           "example": "client: Какие тарифы?\noperator: Здравствуйте, меня зовут Анна."}}}})
     def upload(body: UploadRequest | str = Body(...), conversation_id: str | None = Query(default=None, min_length=1),
@@ -201,9 +202,12 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     @application.get("/api/conversations", response_model=list[ConversationListItem], tags=["Conversations"],
                      summary="Список диалогов", description="q ищет по ID и тексту реплик без учёта регистра; status относится к последней оценке.")
     def conversations(language: Language | None = None, channel: Channel | None = None,
-                      status: Status | Literal["not_evaluated"] | None = None, q: str | None = None):
+                      status: Status | Literal["not_evaluated"] | None = None, q: str | None = None,
+                      dataset_group_id: str | None = Query(default=None, min_length=1, pattern=r"\S",
+                                                          description="Группа источника, например DEV или UPLOAD. Без фильтра список включает все источники.")):
         with connection() as conn:
-            return conversation_list(conn, language=language, channel=channel, status=status, q=q)
+            return conversation_list(conn, language=language, channel=channel, status=status, q=q,
+                                     dataset_group_id=dataset_group_id)
 
     @application.get("/api/conversations/{conversation_id}", response_model=ConversationResponse,
                      tags=["Conversations"], summary="Транскрипт и последний результат")

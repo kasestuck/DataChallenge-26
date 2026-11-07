@@ -235,10 +235,10 @@ def test_batch_api_progress_idempotence_force_and_failure_isolation(api, monkeyp
     assert final["status"] == "completed"
     assert len(final["errors"]) == 1 and final["errors"][0]["conversation_id"] == "missing"
     assert len(calls) == 2
-    second = client.post("/api/evaluations/batch", json={"all": True})
+    second = client.post("/api/evaluations/batch", json={"all": True, "dataset_group_id": "UPLOAD"})
     job, _ = wait_job(client, second.json()["job_id"])
     assert job["skipped"] == 2 and len(calls) == 2
-    forced = client.post("/api/evaluations/batch", json={"all": True, "force": True})
+    forced = client.post("/api/evaluations/batch", json={"all": True, "dataset_group_id": "UPLOAD", "force": True})
     wait_job(client, forced.json()["job_id"])
     assert len(calls) == 4
     invalid = client.post("/api/evaluations/batch", json={"all": True, "conversation_ids": ["a"]})
@@ -298,7 +298,7 @@ def test_partial_batch_prompt_subset_and_weight_only_zero_calls(api):
     checklist["criteria"][4]["description"] = "Учитывай реакцию на конкретное неудобство клиента."
     version = client.post("/api/checklists", json=checklist).json()
     assert version["change_summary"]["evaluation_required"] == ["05"]
-    batch = client.post("/api/evaluations/batch", json={"all": True, "criterion_ids": ["05"]}).json()
+    batch = client.post("/api/evaluations/batch", json={"all": True, "dataset_group_id": "UPLOAD", "criterion_ids": ["05"]}).json()
     job, _ = wait_job(client, batch["job_id"])
     assert not job["errors"]
     assert len(calls) == 2
@@ -309,7 +309,7 @@ def test_partial_batch_prompt_subset_and_weight_only_zero_calls(api):
     version["criteria"][0]["weight"] = 12
     changed_weight = client.post("/api/checklists", json=version).json()
     assert changed_weight["change_summary"]["evaluation_required"] == []
-    recalc = client.post("/api/evaluations/batch", json={"all": True, "criterion_ids": []}).json()
+    recalc = client.post("/api/evaluations/batch", json={"all": True, "dataset_group_id": "UPLOAD", "criterion_ids": []}).json()
     job, _ = wait_job(client, recalc["job_id"])
     assert not job["errors"] and len(calls) == 2
 

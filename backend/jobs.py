@@ -81,10 +81,22 @@ class BatchManager:
             raise JobError("INVALID_BATCH_SELECTION", "conversation_ids должен содержать строки с ID.")
         if request.get("output_language", "ru") not in {"ru", "kk", "en"}:
             raise JobError("INVALID_OUTPUT_LANGUAGE", "Язык объяснений должен быть ru, kk или en.")
+        group = request.get("dataset_group_id")
+        if group is not None:
+            if not isinstance(group, str) or not group.strip():
+                raise JobError("INVALID_BATCH_SELECTION", "dataset_group_id должен быть непустой строкой.")
+            if supplied:
+                raise JobError("INVALID_BATCH_SELECTION", "dataset_group_id применяется только вместе с all=true.")
         with closing(connect_db(self.database_path)) as conn, write_transaction(conn):
             checklist = get_checklist(conn, request.get("checklist_version_id"))
-            ids = list(dict.fromkeys(supplied)) if supplied else [r[0] for r in conn.execute(
-                "SELECT conversation_id FROM conversations ORDER BY conversation_id")]
+            if supplied:
+                ids = list(dict.fromkeys(supplied))
+            elif group is not None:
+                ids = [r[0] for r in conn.execute(
+                    "SELECT conversation_id FROM conversations WHERE dataset_group_id=? ORDER BY conversation_id", (group,))]
+            else:
+                ids = [r[0] for r in conn.execute(
+                    "SELECT conversation_id FROM conversations WHERE COALESCE(dataset_group_id,'') <> 'UPLOAD' ORDER BY conversation_id")]
             selected = request.get("criterion_ids")
             if selected is not None:
                 active_ids = {c["criterion_id"] for c in checklist["criteria"] if c.get("active", True)}

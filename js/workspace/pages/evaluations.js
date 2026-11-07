@@ -1,9 +1,10 @@
-// AI Evaluations: список всех оценок (поиск, язык, статус, диапазон баллов, версия чек-листа) и страница результата.
+// API list shows the latest evaluation of each conversation; details contain full version/date data.
 // Итоговый балл приходит с Backend (total_score / final_total_score) и на Frontend НЕ пересчитывается.
 import { t, applyDom } from '../../../src/i18n/index.js';
 import { getMode, getApiBase, setMode, isAbort, getEvaluations, getEvaluation, getChecklists, getAppeals } from '../../api.js';
 import { esc, icon, num, tr, langTag, opCell, statusBadge, scoreIndicator, grossBadge, dateTime, criteriaCard, errorState, emptyState, mockBanner, loadingState } from '../ui.js';
 import { mountList } from '../listPage.js';
+import { usageSummary } from './usage.js';
 
 const LANG_OPTS = [['', 'ws.f.all'], ['ru', 'ws.lang.ru'], ['kk', 'ws.lang.kk'], ['en', 'ws.lang.en']];
 // Кнопка «Подать апелляцию» в карточках критериев (форма — appealForm.js)
@@ -12,37 +13,40 @@ const RANGES = { '90-100': [90, 100], '75-89': [75, 89], '60-74': [60, 74], '0-5
 
 // ======================= список =======================
 export function mountEvaluations(root, ctx) {
+  const api = getMode() === 'api';
   let versions = [];
   let inner = null, dead = false;
-  // версии чек-листа нужны для фильтра: подгружаем до построения списка; при ошибке фильтр остаётся без версий
-  getChecklists().then((r) => { versions = (r.items || []).map((c) => c.version).sort((a, b) => b - a); }).catch(() => {}).finally(() => {
+  // The API list has no checklist version; only the demo list offers that filter.
+  const ready = api ? Promise.resolve() : getChecklists().then((r) => { versions = (r.items || []).map((c) => c.version).sort((a, b) => b - a); }).catch(() => {});
+  ready.finally(() => {
     if (dead) return;
     inner = mountList(root, ctx, {
-      titleKey: 'ws.nav.evaluations', searchKey: 'ws.evl.search', sort: { key: 'created_at', order: 'desc' },
+      titleKey: 'ws.nav.evaluations', searchKey: 'ws.evl.search', sort: { key: api ? 'conversation_id' : 'created_at', order: 'desc' },
+      summary: () => api ? `<p class="form-hint">${esc(t('ws.evaluationList.apiNote'))}</p>` : '',
       // диапазон баллов передаётся в API как score_min/score_max
       fetch({ range, ...p }, opts) {
         const r = RANGES[range];
-        return getEvaluations({ ...p, ...(r ? { score_min: r[0], score_max: r[1] } : {}) }, opts);
+        return getEvaluations({ ...p, ...(api && !['conversation_id', 'total_score'].includes(p.sort) ? { sort: 'conversation_id' } : {}), ...(r ? { score_min: r[0], score_max: r[1] } : {}) }, opts);
       },
       rowHref: (e) => `#/dashboard/evaluations/${encodeURIComponent(e.id)}`,
       emptyKeys: { title: 'ws.evl.emptyTitle', text: 'ws.evl.emptyText' },
       filters: [
         { name: 'language', labelKey: 'ws.f.language', options: LANG_OPTS },
-        { name: 'status', labelKey: 'ws.f.status', options: [['', 'ws.f.all'], ...['running', 'done', 'failed'].map((s) => [s, `ws.status.eval.${s}`])] },
+        { name: 'status', labelKey: 'ws.f.status', options: [['', 'ws.f.all'], ...['running', 'done', 'needs_review', 'failed'].map((s) => [s, `ws.status.eval.${s}`])] },
         { name: 'range', labelKey: 'ws.evl.range', options: [['', 'ws.f.all'], ...Object.keys(RANGES).map((k) => [k, k.replace('-', '–')])] },
-        { name: 'checklist_version', labelKey: 'ws.evl.version', options: [['', 'ws.f.all'], ...versions.map((v) => [String(v), `v${v}`])] },
+        ...(api ? [] : [{ name: 'checklist_version', labelKey: 'ws.evl.version', options: [['', 'ws.f.all'], ...versions.map((v) => [String(v), `v${v}`])] }]),
         { name: 'gross', labelKey: 'ws.col.gross', options: [['', 'ws.f.all'], ['1', 'ws.evl.onlyGross']] },
       ],
       columns: () => [
-        { label: t('ws.evl.colId'), sortKey: 'created_at', render: (e) => `<a class="row__id" href="#/dashboard/evaluations/${encodeURIComponent(e.id)}">${esc(e.id)}</a>` },
+        { label: t('ws.evl.colId'), sortKey: api ? undefined : 'created_at', render: (e) => `<a class="row__id" href="#/dashboard/evaluations/${encodeURIComponent(e.id)}">${esc(e.id)}</a>` },
         { label: t('ws.evl.colDialog'), sortKey: 'conversation_id', render: (e) => `<a href="#/dashboard/conversations/${encodeURIComponent(e.conversation_id)}">${esc(e.conversation_id)}</a>` },
         { label: t('ws.col.language'), render: (e) => langTag(e.language) },
-        { label: t('ws.col.operator'), render: (e) => opCell(e.operator_id) },
-        { label: t('ws.evl.version'), render: (e) => `v${num(e.checklist_version)}` },
+        { label: t('ws.col.operator'), render: (e) => api ? esc(t('ws.contract.operatorMissing')) : opCell(e.operator_id) },
+        ...(api ? [] : [{ label: t('ws.evl.version'), render: (e) => `v${num(e.checklist_version)}` }]),
         { label: t('ws.col.status'), render: (e) => statusBadge('eval', e.status) },
         { label: t('ws.eval.total'), sortKey: 'total_score', render: (e) => scoreIndicator(e.total_score) },
         { label: t('ws.col.gross'), render: (e) => (e.gross_violation ? grossBadge() : '<span class="muted">—</span>') },
-        { label: t('ws.col.date'), sortKey: 'created_at', render: (e) => `<time datetime="${esc(e.created_at)}">${esc(dateTime(e.created_at))}</time>` },
+        ...(api ? [] : [{ label: t('ws.col.date'), sortKey: 'created_at', render: (e) => `<time datetime="${esc(e.created_at)}">${esc(dateTime(e.created_at))}</time>` }]),
       ],
     });
   });
@@ -67,7 +71,7 @@ export function mountEvaluation(root, ctx) {
     try {
       ev = await getEvaluation(id, { signal: ac.signal }); err = null;
       // апелляции по этой оценке: чтобы показать, по каким критериям уже подана апелляция
-      appeals = (await getAppeals({ conversation_id: ev.conversation_id, page_size: 100 }, { signal: ac.signal }).catch(() => ({ items: [] }))).items || [];
+      appeals = (await getAppeals({ conversation_id: ev.conversation_id, page_size: 100 }, { signal: ac.signal })).items || [];
     } catch (e) {
       if (isAbort(e)) return;
       ev = null; err = e;
@@ -91,19 +95,19 @@ export function mountEvaluation(root, ctx) {
     else {
       const done = (ev.criteria || []).filter((c) => !c.na).length, na = (ev.criteria || []).length - done;
       main = `<div class="evp__total"><div><span class="muted">${esc(t('ws.eval.total'))}</span>${scoreIndicator(ev.total_score)}${changed ? `<span class="evp__final">${esc(t('ws.eval.afterAppeals'))}: <b>${esc(num(ev.final_total_score))}</b></span>` : ''}</div>
-          <div class="evp__flag evp__flag--${ev.gross_violation ? 'bad' : 'ok'}">${ev.gross_violation ? `${icon('alert')}${esc(t('ws.gross.found'))}` : `${icon('check-circle')}${esc(t('ws.gross.none'))}`}</div></div>
+          <div class="evp__flag evp__flag--${ev.gross_violation ? 'bad' : 'ok'}">${ev.gross_violation == null ? esc(t('ws.contract.unknown')) : ev.gross_violation ? `${icon('alert')}${esc(t('ws.gross.found'))}` : `${icon('check-circle')}${esc(t('ws.gross.none'))}`}</div></div>
         <p class="form-hint">${esc(t('ws.eval.fromBackend'))} · ${esc(t('ws.evl.counts', { n: num(done), na: num(na) }))}</p>
         <div class="crit-list">${(ev.criteria || []).map((c) => criteriaCard(c, { conversationId: ev.conversation_id, appeal: APPEALS_ON, appealed: open })).join('')}</div>`;
     }
     body.innerHTML = `<div class="cd__head"><div class="cd__id"><h2>${esc(ev.id)}</h2>${statusBadge('eval', ev.status)}${ev.gross_violation ? grossBadge() : ''}</div>
         <dl class="cd__meta"><div><dt>${esc(t('ws.evl.colDialog'))}</dt><dd><a href="#/dashboard/conversations/${encodeURIComponent(ev.conversation_id)}">${esc(ev.conversation_id)}</a></dd></div>
         <div><dt>${esc(t('ws.col.language'))}</dt><dd>${langTag(ev.language)} ${esc(tr(`ws.lang.${ev.language}`, ev.language))}</dd></div>
-        <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${opCell(ev.operator_id)}</dd></div>
+        <div><dt>${esc(t('ws.col.operator'))}</dt><dd>${getMode() === 'api' ? esc(t('ws.contract.operatorMissing')) : opCell(ev.operator_id)}</dd></div>
         <div><dt>${esc(t('ws.evl.version'))}</dt><dd>${esc(t('ws.eval.versionN', { n: num(ev.checklist_version) }))}</dd></div>
         <div><dt>${esc(t('ws.col.date'))}</dt><dd>${esc(dateTime(ev.created_at))}</dd></div></dl></div>
       ${ev.source === 'mock' ? mockBanner() : ''}
       <section class="panel evp-page"><header class="pane__head"><h3>${icon('sparkle')}${esc(t('ws.evl.result'))}</h3>
-        <a class="btn btn--ghost btn--sm" href="#/dashboard/conversations/${encodeURIComponent(ev.conversation_id)}">${esc(t('ws.evl.openDialog'))}</a></header>${main}</section>`;
+        <a class="btn btn--ghost btn--sm" href="#/dashboard/conversations/${encodeURIComponent(ev.conversation_id)}">${esc(t('ws.evl.openDialog'))}</a></header>${main}${usageSummary(ev.usage)}</section>`;
   }
 
   function onClick(e) {
