@@ -9,3 +9,5 @@ __pycache__/
 .coverage
 htmlcov/
 *.egg-info/
+node_modules/
+*.db

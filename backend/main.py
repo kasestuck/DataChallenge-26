@@ -10,7 +10,7 @@ from typing import Literal
 from fastapi import Body, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
@@ -316,6 +316,18 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     frontend = PROJECT_ROOT / "frontend"
     if frontend.is_dir():
         application.mount("/", StaticFiles(directory=frontend, html=True), name="frontend")
+    elif (PROJECT_ROOT / "index.html").is_file():
+        # The FRONT branch stores public assets at the project root. Expose only
+        # these directories, never the root containing .env, source code or data.
+        for name in ("assets", "css", "js", "src"):
+            directory = PROJECT_ROOT / name
+            if directory.is_dir():
+                application.mount(f"/{name}", StaticFiles(directory=directory), name=f"frontend-{name}")
+
+        @application.get("/", include_in_schema=False)
+        def frontend_index():
+            return FileResponse(PROJECT_ROOT / "index.html")
+
     return application
 
 
