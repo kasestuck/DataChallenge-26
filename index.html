@@ -7,6 +7,7 @@
   <meta name="description" content="">
   <link rel="icon" href="assets/freedom-logo.png" type="image/png">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/workspace.css">
   <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
@@ -36,6 +37,14 @@
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
+      <symbol id="i-chevrons-left" viewBox="0 0 24 24"><path d="M12 7l-5 5 5 5M18 7l-5 5 5 5"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+      <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol>
       <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
     </defs>
   </svg>
@@ -429,18 +438,62 @@
       </form>
     </div>
 
-    <!-- ===================== DASHBOARD ===================== -->
-    <div class="view view--dashboard" data-view="dashboard" hidden>
-      <header class="dash__head">
-        <h2 id="dash-title" data-i18n="dash.title"></h2>
-        <button class="btn btn--ghost" type="button" id="logout-btn" data-i18n="dash.logout"></button>
-      </header>
-      <div class="dash__grid">
-        <article class="card"><h3 data-i18n="dash.dialogs"></h3><p class="kpi-num">—</p></article>
-        <article class="card"><h3 data-i18n="dash.avg"></h3><p class="kpi-num">—</p></article>
-        <article class="card"><h3 data-i18n="dash.violations"></h3><p class="kpi-num">—</p></article>
+    <!-- ===================== WORKSPACE (внутренняя система проверяющего) ===================== -->
+    <div class="view view--dashboard ws" id="ws" data-view="dashboard" hidden>
+      <button class="ws-skip" type="button" id="ws-skip" data-i18n="ws.skip"></button>
+      <aside class="ws-side" id="ws-side">
+        <div class="ws-side__head">
+          <a class="ws-brand" href="#/dashboard"><img src="assets/freedom-logo.png" alt="" width="28" height="32"><span class="ws-brand__t"><b>Freedom</b><small>CQA Insight</small></span></a>
+          <button class="iconbtn ws-close" type="button" id="ws-close" data-i18n-attr="aria-label:ws.side.close"><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg></button>
+        </div>
+        <nav class="ws-nav" data-i18n-attr="aria-label:ws.nav.label">
+        <a class="ws-nav__link" href="#/dashboard" data-section="overview" data-i18n-attr="title:ws.nav.overview">
+          <svg class="ico" aria-hidden="true"><use href="#i-home"/></svg><span class="ws-nav__t" data-i18n="ws.nav.overview"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/conversations" data-section="conversations" data-i18n-attr="title:ws.nav.conversations">
+          <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg><span class="ws-nav__t" data-i18n="ws.nav.conversations"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/evaluations" data-section="evaluations" data-i18n-attr="title:ws.nav.evaluations">
+          <svg class="ico" aria-hidden="true"><use href="#i-check-square"/></svg><span class="ws-nav__t" data-i18n="ws.nav.evaluations"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/operators" data-section="operators" data-i18n-attr="title:ws.nav.operators">
+          <svg class="ico" aria-hidden="true"><use href="#i-users"/></svg><span class="ws-nav__t" data-i18n="ws.nav.operators"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/appeals" data-section="appeals" data-i18n-attr="title:ws.nav.appeals">
+          <svg class="ico" aria-hidden="true"><use href="#i-quote"/></svg><span class="ws-nav__t" data-i18n="ws.nav.appeals"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/checklist" data-section="checklist" data-i18n-attr="title:ws.nav.checklist">
+          <svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span class="ws-nav__t" data-i18n="ws.nav.checklist"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+        </a>
+        </nav>
+        <button class="ws-collapse" type="button" id="ws-collapse" aria-expanded="true"><svg class="ico" aria-hidden="true"><use href="#i-chevrons-left"/></svg><span id="ws-collapse-t"></span></button>
+      </aside>
+      <div class="ws-scrim" id="ws-scrim" hidden></div>
+      <div class="ws-body">
+        <header class="ws-top">
+          <button class="iconbtn ws-burger" type="button" id="ws-burger" aria-expanded="false" aria-controls="ws-side" data-i18n-attr="aria-label:ws.side.open"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
+          <h1 class="ws-top__title" id="dash-title" tabindex="-1"></h1>
+          <label class="ws-search"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="ws-search" type="search" autocomplete="off"></label>
+          <div class="ws-top__right">
+            <button class="ws-mode" type="button" id="ws-mode" data-mode="demo"><i aria-hidden="true"></i><span id="ws-mode-text"></span></button>
+            <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
+              <button type="button" data-lang="ru" lang="ru">RU</button>
+              <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+              <button type="button" data-lang="en" lang="en">EN</button>
+            </div>
+            <div class="ws-user">
+              <button class="ws-user__btn" type="button" id="ws-user-btn" aria-haspopup="true" aria-expanded="false" aria-controls="ws-menu" data-i18n-attr="aria-label:ws.top.menu">
+                <span class="ws-avatar" id="ws-avatar" aria-hidden="true"></span><span class="ws-user__name" data-i18n="ws.top.user"></span>
+              </button>
+              <div class="ws-menu" id="ws-menu" hidden>
+                <div class="ws-menu__who"><b data-i18n="ws.top.role"></b><span id="ws-email"></span></div>
+                <button class="ws-menu__item" type="button" id="logout-btn"><svg class="ico" aria-hidden="true"><use href="#i-logout"/></svg><span data-i18n="ws.top.logout"></span></button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="ws-main" id="ws-main"></div>
       </div>
-      <p class="demo-note dash__note" data-i18n="dash.empty"></p>
     </div>
 
   </main>

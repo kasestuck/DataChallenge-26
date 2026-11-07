@@ -81,7 +81,6 @@ em { font-style: italic; color: var(--c-green-dark); }
 .view--welcome:not(.is-active) { transform: translateY(-12px); pointer-events: none; }
 .view--login { display: grid; place-items: center; padding: 96px 16px 32px; }
 .view--login[hidden], .view--dashboard[hidden] { display: none; }
-.view--dashboard { padding: 96px clamp(16px, 4vw, 48px) 40px; max-width: calc(var(--maxw) + 96px); margin-inline: auto; }
 
 /* ---------- topbar ---------- */
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--c-green-deep); font-weight: 800; font-size: 22px; letter-spacing: -.01em; border-radius: 8px; }
@@ -355,16 +354,8 @@ html:not(.js) .arc--a { stroke-dashoffset: 0; }
 .form-error { color: var(--c-error); font-size: 14px; }
 .link { color: var(--c-muted); font-size: 14px; text-align: center; text-decoration: none; padding: 8px; }
 .link:hover { color: var(--c-green-dark); }
-.dash__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.dash__head h2 { font-size: 28px; color: var(--c-ink); }
-.dash__grid { margin-top: 24px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.dash__grid .card { opacity: 0; transform: translateY(12px); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
-.view--dashboard.is-active .card { opacity: 1; transform: none; }
-.view--dashboard.is-active .card:nth-child(2) { transition-delay: 70ms; }
-.view--dashboard.is-active .card:nth-child(3) { transition-delay: 140ms; }
 .card h3 { font-size: 14px; color: var(--c-muted); font-weight: 600; }
 .kpi-num { margin-top: 8px; font-size: 36px; font-weight: 800; color: var(--c-ink); }
-.dash__note { margin-top: 20px; }
 
 /* =========================================================
    Glass Motion Upgrade: слои фона, 3D-объекты, глубина карточек

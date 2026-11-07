@@ -1,4 +1,5 @@
 import { initLanding } from './landing.js';
+import { initWorkspace } from './workspace/app.js';
 import { initI18n, setLang, getLang, onLangChange, LANGS } from '../src/i18n/index.js';
 
 const AUTH_KEY = 'cqa-demo-auth';   // ДЕМО: флаг в sessionStorage, настоящей авторизации нет
@@ -7,6 +8,7 @@ const views = Object.fromEntries([...document.querySelectorAll('.view')].map((v)
 
 initI18n();
 const landing = initLanding();
+const workspace = initWorkspace();
 
 // ---------- переключатель языка ----------
 const langButtons = [...document.querySelectorAll('[data-lang]')];
@@ -26,7 +28,7 @@ let token = 0;   // защита от гонок при быстрых пере�
 const authed = () => { try { return sessionStorage.getItem(AUTH_KEY) === '1'; } catch { return false; } };
 
 function routeFromHash() {
-  const r = location.hash.replace(/^#\/?/, '') || 'welcome';
+  const r = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0] || 'welcome';   // dashboard/<раздел> обслуживает Workspace
   const name = views[r] ? r : 'welcome';
   return name === 'dashboard' && !authed() ? 'login' : name;
 }
@@ -44,6 +46,7 @@ async function show(name) {
     if (my !== token) return;
     from.hidden = true;
     if (current === 'welcome') landing.leave();
+    if (current === 'dashboard') workspace.leave();
   }
 
   current = name;
@@ -51,6 +54,7 @@ async function show(name) {
   to.hidden = false;
   window.scrollTo(0, 0);
   if (name === 'welcome') landing.enter();
+  if (name === 'dashboard') workspace.enter();
   await nextFrame();
   if (my !== token) return;
   to.classList.add('is-active');                     // 3. fade + translateY
@@ -67,7 +71,7 @@ $('#brand-link').addEventListener('click', (e) => {
   if (current === 'welcome') scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); else go('welcome');
 });
 $('#logout-btn').addEventListener('click', () => {
-  try { sessionStorage.removeItem(AUTH_KEY); } catch { /* storage недоступен */ }
+  try { sessionStorage.removeItem(AUTH_KEY); sessionStorage.removeItem('cqa-demo-user'); } catch { /* storage недоступен */ }
   go('welcome');
 });
 $('#login-form').addEventListener('submit', (e) => {
@@ -76,7 +80,7 @@ $('#login-form').addEventListener('submit', (e) => {
   const ok = email.value.trim() && pass.value;
   $('#login-error').hidden = !!ok;
   if (!ok) { (email.value.trim() ? pass : email).focus(); return; }
-  try { sessionStorage.setItem(AUTH_KEY, '1'); } catch { /* storage недоступен */ }
+  try { sessionStorage.setItem(AUTH_KEY, '1'); sessionStorage.setItem('cqa-demo-user', email.value.trim()); } catch { /* storage недоступен */ }
   pass.value = '';
   go('dashboard');
 });
@@ -84,11 +88,12 @@ window.addEventListener('hashchange', () => show(routeFromHash()));
 
 // первичная загрузка — без анимации ухода; работает и после refresh на любом маршруте
 const first = routeFromHash();
-if (location.hash && `#/${first}` !== location.hash) history.replaceState(null, '', `#/${first}`);
+if (location.hash && location.hash.replace(/^#\/?/, '').split(/[/?]/)[0] !== first) history.replaceState(null, '', `#/${first}`);
 current = first;
 document.body.dataset.view = first;
 Object.entries(views).forEach(([name, v]) => { v.hidden = name !== first; });
 if (first === 'welcome') landing.enter();
+if (first === 'dashboard') workspace.enter();
 requestAnimationFrame(() => {
   views[first].classList.add('is-active');
   if (first === 'login') $('#login-email').focus({ preventScroll: true });
