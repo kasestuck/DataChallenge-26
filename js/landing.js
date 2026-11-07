@@ -90,6 +90,20 @@ function initAudioDemo() {
   });
   box.append(...bars);
 
+  const card = $('#audio-card'), crit = $$('.audio__result li', card), score = $('.audio__score', card);
+  const ai = $('#audio-ai'), aiText = $('#audio-ai-text');
+  let aiState = null;
+  const setAi = (s) => {
+    aiState = s; ai.hidden = !s; ai.classList.toggle('is-done', s === 'done');
+    aiText.textContent = s ? t(s === 'done' ? 'about.audio.done' : 'about.audio.analyzing') : '';
+  };
+  // Демо-последовательность (визуальная, без запросов и без звука): волна → индикатор AI → критерии → итог
+  const stage = () => {
+    if (!card.hasAttribute('data-run')) return;
+    crit.forEach((li, i) => li.classList.toggle('is-lit', p >= 0.32 + i * 0.18));
+    score.classList.toggle('is-on', p >= 0.92);
+    setAi(p >= 1 ? 'done' : p >= 0.1 ? 'analyzing' : null);
+  };
   const DURATION = 12000;           // миллисекунд демонстрации
   const TOTAL_S = 134;              // «2:14»
   let playing = false, raf = 0, startAt = 0, startP = 0, p = 0;
@@ -100,27 +114,32 @@ function initAudioDemo() {
     bars.forEach((b, i) => b.classList.toggle('is-played', i < k));
     bar.style.width = `${p * 100}%`;
     now.textContent = fmt(p * TOTAL_S);
+    stage();
   };
   function frame(ts) {
     p = clamp(startP + (ts - startAt) / DURATION, 0, 1);
     paint();
-    if (p >= 1) { stop(true); return; }
+    if (p >= 1) { stop(); return; }
     raf = requestAnimationFrame(frame);
   }
   function play() {
+    card.setAttribute('data-run', '');
     if (p >= 1) p = 0;
+    paint();
     playing = true; startP = p; startAt = performance.now();
+    $('#audio-card').classList.add('is-playing');
     btn.setAttribute('aria-pressed', 'true'); btn.querySelector('use').setAttribute('href', '#i-pause'); label();
     raf = requestAnimationFrame(frame);
   }
   function stop(reset = false) {
     playing = false; cancelAnimationFrame(raf);
+    $('#audio-card').classList.remove('is-playing');
     if (reset) { p = 0; paint(); }
     btn.setAttribute('aria-pressed', 'false'); btn.querySelector('use').setAttribute('href', '#i-play'); label();
   }
   btn.addEventListener('click', () => (playing ? stop() : play()));
   document.addEventListener('visibilitychange', () => { if (document.hidden && playing) stop(); });
-  onLangChange(label);
+  onLangChange(() => { label(); if (aiState) setAi(aiState); });
   return { stop };
 }
 
@@ -151,6 +170,19 @@ function initFlow(root) {
     const W = root.clientWidth, H = root.scrollHeight;
     if (!W || !H) return;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    // маска: лента приглушается за заголовками и абзацами, чтобы не пересекать текст
+    const mask = $('#flow-mask');
+    mask.setAttribute('x', 0); mask.setAttribute('y', 0);
+    mask.setAttribute('width', W); mask.setAttribute('height', H);
+    const mb = $('#flow-mask-base'); mb.setAttribute('width', W); mb.setAttribute('height', H);
+    const rr0 = root.getBoundingClientRect();
+    const holes = $$('.h2, .display, .section__lead, .about__text p, .preview__text p, .step h3, .step p, .cta p', root)
+      .filter((n) => n.offsetParent !== null)
+      .map((n) => {
+        const r = n.getBoundingClientRect();
+        return el('rect', { x: r.left - rr0.left - 24, y: r.top - rr0.top - 12, width: r.width + 48, height: r.height + 24, rx: 18 });
+      });
+    $('#flow-mask-holes').replaceChildren(...holes);
     const hero = box('.hero'), about = box('.about__grid'), steps = box('.steps'), bento = box('.bento'), prev = box('.appwin');
     if (!hero || !about || !steps || !bento || !prev) return;
     const x = (f) => f * W;
@@ -201,6 +233,7 @@ export function initLanding() {
   const topbar = $('#topbar');
 
   let active = false;
+  document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('tab-hidden', document.hidden));
   const waves = [{ canvas: $('#wave'), wave: heroWave, visible: false }];
   const syncWaves = () => waves.forEach((w) => (active && w.visible ? w.wave.start() : w.wave.stop()));
   const waveIO = new IntersectionObserver((entries) => {
@@ -228,8 +261,43 @@ export function initLanding() {
       ticking = false;
       topbar.classList.toggle('is-solid', scrollY > 24);
       flow.update();
+      if (!reduceMq.matches) root.style.setProperty('--sy', `${scrollY}px`);
     });
   };
+
+  // 3D-гарнитура и стеклянная панель: наклон от курсора (точный указатель, без reduced-motion, не на мобильных)
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  const tiltOn = () => fine.matches && !reduceMq.matches && innerWidth > 768;
+  const hs = $('#hs3d'), gt = $('#gtilt'), heroEl = $('.hero', root);
+  let tx = 0, ty = 0, pending = false, tracking = false;
+  const applyTilt = () => {
+    pending = false;
+    hs.style.setProperty('--px', tx.toFixed(3)); hs.style.setProperty('--py', ty.toFixed(3));
+    hs.style.setProperty('--hry', `${(tx * 8).toFixed(2)}deg`); hs.style.setProperty('--hrx', `${(-ty * 5).toFixed(2)}deg`);
+  };
+  const resetTilt = () => {
+    tracking = false; tx = ty = 0;
+    hs.classList.remove('is-tracking');
+    ['--px', '--py', '--hry', '--hrx'].forEach((k) => hs.style.removeProperty(k));
+  };
+  heroEl.addEventListener('pointermove', (e) => {
+    if (!tiltOn() || e.pointerType !== 'mouse') return;
+    const r = heroEl.getBoundingClientRect();
+    tx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
+    ty = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
+    if (!tracking) { tracking = true; hs.classList.add('is-tracking'); }
+    if (!pending) { pending = true; requestAnimationFrame(applyTilt); }
+  });
+  heroEl.addEventListener('pointerleave', resetTilt);
+  const panel = $('.hero__panel', root);
+  panel.addEventListener('pointermove', (e) => {
+    if (!tiltOn() || e.pointerType !== 'mouse') return;
+    const r = panel.getBoundingClientRect();
+    const nx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1), ny = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
+    gt.classList.add('is-tracking');
+    gt.style.setProperty('--pry', `${(nx * 12).toFixed(2)}deg`); gt.style.setProperty('--prx', `${(-ny * 10).toFixed(2)}deg`);
+  });
+  panel.addEventListener('pointerleave', () => { gt.classList.remove('is-tracking'); gt.style.removeProperty('--pry'); gt.style.removeProperty('--prx'); });
 
   // перестраиваем ленту при изменении размеров/высоты контента
   let buildRaf = 0;
@@ -240,6 +308,7 @@ export function initLanding() {
   $$('.critlist button').forEach((b) => b.addEventListener('click', () => b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true'))));
   $('#scroll-hint').addEventListener('click', () => $('#about').scrollIntoView({ behavior: reduceMq.matches ? 'auto' : 'smooth' }));
   reduceMq.addEventListener('change', flow.update);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) resetTilt(); });
 
   // данные превью (демо до появления Backend API)
   let data = null;

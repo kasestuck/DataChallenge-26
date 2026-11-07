@@ -61,45 +61,62 @@
     <!-- ===================== LANDING ===================== -->
     <div class="view view--welcome" data-view="welcome">
 
-      <!-- Continuous Green Flow: одна лента через всю страницу (строится в JS) -->
+      <!-- Continuous Green Flow: тонкая лента через всю страницу (строится в JS), под текстом приглушается маской -->
       <svg class="flow" id="flow" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="flow-grad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stop-color="#4fb84f" stop-opacity=".0"/>
-            <stop offset=".25" stop-color="#4fb84f" stop-opacity=".9"/>
-            <stop offset="1" stop-color="#045333" stop-opacity=".9"/>
+            <stop offset=".25" stop-color="#4fb84f" stop-opacity=".85"/>
+            <stop offset="1" stop-color="#045333" stop-opacity=".85"/>
           </linearGradient>
+          <mask id="flow-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+            <rect id="flow-mask-base" x="0" y="0" width="100" height="100" fill="#fff"/>
+            <g id="flow-mask-holes" fill="#3a3a3a"></g>
+          </mask>
         </defs>
-        <path class="flow__ghost" id="flow-ghost"/>
-        <path class="flow__band" id="flow-band"/>
-        <path class="flow__line" id="flow-line"/>
+        <g mask="url(#flow-mask)">
+          <path class="flow__ghost" id="flow-ghost"/>
+          <path class="flow__band" id="flow-band"/>
+          <path class="flow__line" id="flow-line"/>
+        </g>
       </svg>
 
       <!-- 1. Hero -->
       <section class="hero" aria-labelledby="hero-title">
-        <div class="ribbons" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="ribbons" aria-hidden="true">
+          <svg class="rb rb--back" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+            <defs>
+              <linearGradient id="rbA" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".35" stop-color="#4fb84f" stop-opacity=".34"/><stop offset=".72" stop-color="#7fd77f" stop-opacity=".2"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+              <linearGradient id="rbB" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#9fe19f" stop-opacity=".2"/></linearGradient>
+            </defs>
+            <path d="M-120 640C260 470 640 720 1020 540S1520 380 1600 340V520C1380 590 1180 760 880 840S280 880-120 860Z" fill="url(#rbA)"/>
+            <path d="M620 -40C900 150 1240 40 1540 230V-40Z" fill="url(#rbB)"/>
+          </svg>
+          <svg class="rb rb--mid" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+            <defs>
+              <linearGradient id="rbC" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset=".3" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".6" stop-color="#6fcf6f" stop-opacity=".26"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+              <linearGradient id="rbE" x1="0" x2="1"><stop offset="0" stop-color="#045333" stop-opacity="0"/><stop offset=".5" stop-color="#045333" stop-opacity=".09"/><stop offset="1" stop-color="#4fb84f" stop-opacity=".2"/></linearGradient>
+            </defs>
+            <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90V210C1320 240 1000 400 700 360S200 340-120 330Z" fill="url(#rbC)"/>
+            <path d="M-100 770C300 690 700 890 1100 750S1500 690 1580 710V800C1300 850 900 930 560 880S100 820-100 850Z" fill="url(#rbE)"/>
+          </svg>
+          <svg class="rb rb--front" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+            <defs><linearGradient id="rbD" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".4" stop-color="#4fb84f" stop-opacity=".7"/><stop offset="1" stop-color="#045333" stop-opacity="0"/></linearGradient></defs>
+            <path d="M-60 520C300 360 700 640 1060 440S1500 300 1520 280" fill="none" stroke="url(#rbD)" stroke-width="1.6"/>
+            <path d="M-60 560C320 410 700 690 1060 490S1480 350 1520 330" fill="none" stroke="url(#rbD)" stroke-width="1" opacity=".5"/>
+            <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.2"/>
+          </svg>
+        </div>
 
         <div class="hero__main">
           <canvas class="wave" id="wave" aria-hidden="true"></canvas>
 
-          <!-- Гарнитура (иллюстрация) -->
-          <div class="hero__headset floaty" role="img" data-i18n-attr="aria-label:hero.headset">
-            <svg viewBox="0 0 260 280" focusable="false" aria-hidden="true">
-              <defs>
-                <linearGradient id="hs-band" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bff0b8"/><stop offset=".5" stop-color="#4fb84f"/><stop offset="1" stop-color="#045333"/></linearGradient>
-                <radialGradient id="hs-cup" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#e9ffe5"/><stop offset=".45" stop-color="#6fd06a"/><stop offset="1" stop-color="#0c6b3c"/></radialGradient>
-                <radialGradient id="hs-cup2" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#d9f6d4"/><stop offset="1" stop-color="#2f9a4a"/></radialGradient>
-              </defs>
-              <ellipse cx="130" cy="262" rx="78" ry="9" fill="#045333" opacity=".12"/>
-              <path d="M44 150a86 86 0 0 1 172 0" fill="none" stroke="url(#hs-band)" stroke-width="16" stroke-linecap="round"/>
-              <path d="M52 146a78 78 0 0 1 156 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.5" stroke-linecap="round"/>
-              <ellipse cx="46" cy="170" rx="34" ry="46" fill="url(#hs-cup)"/>
-              <ellipse cx="46" cy="170" rx="19" ry="28" fill="url(#hs-cup2)" opacity=".85"/>
-              <ellipse cx="214" cy="170" rx="34" ry="46" fill="url(#hs-cup)"/>
-              <ellipse cx="214" cy="170" rx="19" ry="28" fill="url(#hs-cup2)" opacity=".85"/>
-              <path d="M222 208c0 30-38 44-84 44" fill="none" stroke="#0c6b3c" stroke-width="5" stroke-linecap="round"/>
-              <ellipse cx="128" cy="252" rx="13" ry="8" fill="#045333"/>
-            </svg>
+          <!-- 3D-гарнитура: подготовленный прозрачный WebP (assets/headset.webp), параллакс от курсора -->
+          <div class="hero__headset">
+            <div class="hs3d" id="hs3d"><div class="hs3d__sway">
+              <img class="hs3d__img" src="assets/headset.webp" width="900" height="811" alt="" data-i18n-attr="alt:hero.headset" draggable="false" decoding="async" fetchpriority="high">
+            </div></div>
+            <span class="hs3d__shadow" aria-hidden="true"></span>
           </div>
 
           <div class="hero__center">
@@ -113,13 +130,19 @@
             </button>
           </div>
 
-          <!-- Стеклянная аналитическая панель (иллюстрация) -->
+          <!-- Стеклянная аналитическая панель (иллюстрация, 3D-наклон по hover) -->
           <div class="hero__panel floaty floaty--b" aria-hidden="true">
-            <div class="gpanel">
-              <div class="gpanel__bars"><i style="--h:26%"></i><i style="--h:38%"></i><i style="--h:34%"></i><i style="--h:52%"></i><i style="--h:68%"></i><i style="--h:86%"></i></div>
-              <svg class="gpanel__line" viewBox="0 0 200 110" preserveAspectRatio="none"><path d="M6 92 L48 70 L88 78 L130 44 L170 24" fill="none" stroke="#4fb84f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="48" cy="70" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/><circle cx="88" cy="78" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/><circle cx="130" cy="44" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/></svg>
+            <div class="gtilt" id="gtilt">
+              <div class="gpanel3d">
+                <span class="gpanel3d__back"></span>
+                <div class="gpanel3d__face">
+                  <i class="gloss"></i>
+                  <div class="gbars"><i style="--h:26%"></i><i style="--h:38%"></i><i style="--h:33%"></i><i style="--h:52%"></i><i style="--h:68%"></i><i style="--h:86%"></i></div>
+                  <svg class="gline" viewBox="0 0 200 110" preserveAspectRatio="none"><defs><linearGradient id="gl-g" x1="0" x2="1"><stop offset="0" stop-color="#8fdc8f"/><stop offset="1" stop-color="#2f9a4a"/></linearGradient></defs><path d="M8 90 C 30 78, 40 66, 56 70 S 88 84, 104 62 S 140 38, 176 22" fill="none" stroke="url(#gl-g)" stroke-width="3.2" stroke-linecap="round"/><circle cx="56" cy="70" r="4.5" fill="#fff" stroke="#3fa341" stroke-width="2"/><circle cx="104" cy="62" r="4.5" fill="#fff" stroke="#3fa341" stroke-width="2"/><circle cx="176" cy="22" r="5" fill="#fff" stroke="#3fa341" stroke-width="2.4"/></svg>
+                </div>
+                <div class="aichip"><span>AI</span></div>
+              </div>
             </div>
-            <div class="aichip"><span>AI</span></div>
           </div>
         </div>
 
@@ -152,7 +175,7 @@
               <svg class="ico ico--solid" aria-hidden="true"><use href="#i-check"/></svg>
               <div><b data-i18n="about.audio.badge"></b><span>AI</span></div>
             </div>
-            <div class="audio__head"><span class="tag" data-i18n="common.demo"></span></div>
+            <div class="audio__head"><span class="tag" data-i18n="common.demo"></span><span class="aistat" id="audio-ai" hidden><i></i><span id="audio-ai-text"></span></span></div>
             <div class="audio__player">
               <button class="audio__btn" type="button" id="audio-btn" aria-pressed="false" data-i18n-attr="aria-label:about.audio.play">
                 <svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>
@@ -182,21 +205,21 @@
             <h2 class="h2 reveal" id="how-title"><span data-i18n="how.title"></span> <em data-i18n="how.titleAccent"></em></h2>
           </div>
           <ol class="steps">
-            <li class="step glass reveal" style="--i:0">
+            <li class="step glass reveal" tabindex="0" style="--i:0">
               <span class="step__num">01</span>
               <svg class="ico ico--lg" aria-hidden="true"><use href="#i-folder"/></svg>
               <h3 data-i18n="how.s1.title"></h3>
               <p data-i18n="how.s1.text"></p>
               <div class="viz viz--files" aria-hidden="true"><span><svg class="ico"><use href="#i-file"/></svg>call_0412</span><span><svg class="ico"><use href="#i-file"/></svg>chat_0388</span><span class="viz__bar"><i></i></span></div>
             </li>
-            <li class="step glass reveal" style="--i:1">
+            <li class="step glass reveal" tabindex="0" style="--i:1">
               <span class="step__num">02</span>
               <svg class="ico ico--lg" aria-hidden="true"><use href="#i-cpu"/></svg>
               <h3 data-i18n="how.s2.title"></h3>
               <p data-i18n="how.s2.text"></p>
               <div class="viz viz--scan" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
             </li>
-            <li class="step glass reveal" style="--i:2">
+            <li class="step glass reveal" tabindex="0" style="--i:2">
               <span class="step__num">03</span>
               <svg class="ico ico--lg" aria-hidden="true"><use href="#i-trend"/></svg>
               <h3 data-i18n="how.s3.title"></h3>

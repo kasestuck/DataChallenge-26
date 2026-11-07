@@ -33,6 +33,8 @@ export default {
       pause: 'Stop the demo',
       result: 'Review result',
       total: 'Overall score',
+      analyzing: 'AI is analysing…',
+      done: 'Analysis complete',
     },
   },
   how: {
