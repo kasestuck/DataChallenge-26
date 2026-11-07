@@ -9,6 +9,15 @@ import { confirmDialog, toast } from '../overlay.js';
 const href = (id) => `#/dashboard/appeals/${encodeURIComponent(id)}`;
 const short = (s, n = 70) => (String(s).length > n ? `${String(s).slice(0, n).trimEnd()}…` : String(s));
 
+// Реальный Backend принимает не «новый балл», а новый ОТВЕТ по критерию (yes/no или ключ шкалы); баллы считает сам Backend.
+function newValueField(a) {
+  const c = a.criterion;
+  if (c?.answer_key == null) return `<label class="field" data-newscore><span>${esc(t('ws.apl.newScore'))} (0–${esc(num(a.max_score))})</span><input type="number" name="new_score" min="0" max="${esc(a.max_score)}" step="0.5" value="${esc(a.original_score)}" inputmode="decimal"></label>`;
+  const keys = c.answer_type === 'scale' ? [...(c.scale_keys || [])].sort((x, y) => Number(y) - Number(x)) : ['yes', 'no'];
+  const label = (k) => (c.answer_type === 'scale' ? k : t(k === 'yes' ? 'ws.ans.yes' : 'ws.ans.no'));
+  return `<label class="field" data-newscore><span>${esc(t('ws.apl.finalAnswer'))}</span><select name="final_answer">${keys.map((k) => `<option value="${esc(k)}"${k === c.answer_key ? ' selected' : ''}>${esc(label(k))}</option>`).join('')}</select></label>`;
+}
+
 // ======================= список =======================
 export function mountAppeals(root, ctx) {
   return mountList(root, ctx, {
@@ -60,7 +69,7 @@ export function mountAppealDetail(root, ctx) {
         <form data-form novalidate><fieldset class="seg-field"><legend>${esc(t('ws.apl.decision'))}</legend>
           <label class="radio"><input type="radio" name="decision" value="approved" checked><span>${esc(t('ws.status.appeal.approved'))}</span></label>
           <label class="radio"><input type="radio" name="decision" value="rejected"><span>${esc(t('ws.status.appeal.rejected'))}</span></label></fieldset>
-          <label class="field" data-newscore><span>${esc(t('ws.apl.newScore'))} (0–${esc(num(a.max_score))})</span><input type="number" name="new_score" min="0" max="${esc(a.max_score)}" step="0.5" value="${esc(a.original_score)}" inputmode="decimal"></label>
+          ${newValueField(a)}
           <label class="field"><span>${esc(t('ws.apl.reason'))}</span><textarea name="reason" rows="3" maxlength="1000" placeholder="${esc(t('ws.apl.reasonPh'))}"></textarea></label>
           <p class="form-error" data-err hidden role="alert"></p>
           <div class="form-actions"><button class="btn" type="submit" data-submit>${esc(t('ws.apl.submitDecision'))}</button></div></form></section>`
@@ -97,15 +106,16 @@ export function mountAppealDetail(root, ctx) {
     er.hidden = true;
     const decision = form.elements.decision.value;
     const reason = form.elements.reason.value.trim();
-    const newScore = Number(form.elements.new_score.value);
+    const useAnswer = !!form.elements.final_answer;
+    const newScore = useAnswer ? NaN : Number(form.elements.new_score.value);
     const fail = (msg) => { er.hidden = false; er.textContent = msg; };
     if (!reason) { fail(t('ws.apl.reasonRequired')); form.elements.reason.focus(); return; }
-    if (decision === 'approved' && (form.elements.new_score.value === '' || !Number.isFinite(newScore) || newScore < 0 || newScore > a.max_score)) { fail(t('ws.apl.scoreRange', { max: num(a.max_score) })); form.elements.new_score.focus(); return; }
+    if (decision === 'approved' && !useAnswer && (form.elements.new_score.value === '' || !Number.isFinite(newScore) || newScore < 0 || newScore > a.max_score)) { fail(t('ws.apl.scoreRange', { max: num(a.max_score) })); form.elements.new_score.focus(); return; }
     const ok = await confirmDialog({ title: t('ws.apl.confirmTitle'), text: t(decision === 'approved' ? 'ws.apl.confirmApprove' : 'ws.apl.confirmReject', { id: a.id }), confirm: t('ws.common.confirm') });
     if (!ok) return;
     busy = true; form.querySelector('[data-submit]').disabled = true;
     try {
-      a = await decideAppeal(id, { decision, reason, ...(decision === 'approved' ? { new_score: newScore } : {}) });
+      a = await decideAppeal(id, { decision, reason, ...(useAnswer ? { original_answer: a.criterion.answer_key } : {}), ...(decision === 'approved' ? (useAnswer ? { final_answer: form.elements.final_answer.value } : { new_score: newScore }) : {}) });
       toast(t('ws.apl.decided'));
       render();
     } catch (x) {

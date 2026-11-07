@@ -31,7 +31,7 @@ export function mountConversations(root, ctx) {
       { label: t('ws.col.status'), render: (c) => statusBadge('conv', c.status) },
       { label: t('ws.col.score'), sortKey: 'score', render: (c) => scoreIndicator(c.score) },
       { label: t('ws.col.gross'), render: (c) => (c.gross_violation ? grossBadge() : '<span class="muted">—</span>') },
-      { label: t('ws.col.date'), sortKey: 'started_at', render: (c) => `<time datetime="${esc(c.started_at)}">${esc(dateTime(c.started_at))}</time>` },
+      { label: t('ws.col.date'), sortKey: 'started_at', render: (c) => (c.started_at ? `<time datetime="${esc(c.started_at)}">${esc(dateTime(c.started_at))}</time>` : '<span class="muted">—</span>') },
     ],
     toolbarExtra: () => `<button class="btn btn--ghost" type="button" data-act="import">${icon('upload')}${esc(t('ws.conv.import'))}</button>`,
     onClick(e, { reload }) {
@@ -184,7 +184,7 @@ export function mountConversation(root, ctx) {
       ? (conv.audio_url ? `<figure class="audio-box"><figcaption>${esc(t('ws.conv.recording'))}</figcaption><audio controls preload="none" src="${esc(conv.audio_url)}"></audio></figure>`
         : `<p class="audio-none">${icon('headset')}${esc(t('ws.conv.noAudio'))}</p>`) : '';
     const rows = (conv.messages || []).map((m) => `<li class="msg msg--${esc(m.role)}" data-mid="${esc(m.id)}"><div class="msg__meta"><span class="msg__role">${esc(tr(`ws.role.${m.role}`, m.role))}</span>
-      <time datetime="${esc(m.ts)}" title="${esc(m.ts)}">${esc(hhmmss(m.ts))}${m.offset_sec != null ? ` · ${mmss(m.offset_sec)}` : ''}</time><span class="msg__id">#${esc(m.id)}</span></div>
+      ${m.ts || m.offset_sec != null ? `<time${m.ts ? ` datetime="${esc(m.ts)}" title="${esc(m.ts)}"` : ''}>${esc([m.ts ? hhmmss(m.ts) : '', m.offset_sec != null ? mmss(m.offset_sec) : ''].filter(Boolean).join(' · '))}</time>` : ''}<span class="msg__id">#${esc(m.id)}</span></div>
       <p class="msg__text" lang="${esc(conv.language)}">${esc(m.text)}</p></li>`).join('');
     trPane.innerHTML = `<header class="pane__head"><h3>${esc(t('ws.conv.transcript'))}</h3><span class="muted">${esc(t('ws.conv.msgCount', { n: num(conv.messages?.length || 0) }))}</span></header>
       ${audio}<div data-warn>${evidenceWarn ? `<p class="banner banner--warn" role="alert">${icon('alert')}<span>${esc(evidenceWarn)}</span></p>` : ''}</div>
@@ -249,7 +249,12 @@ export function mountConversation(root, ctx) {
       ev = r; evId = r.id;
       conv.evaluations = [...(conv.evaluations || []), { id: r.id, checklist_version: r.checklist_version, status: r.status, total_score: r.total_score, created_at: r.created_at }];
       conv.status = 'evaluating'; renderHead();
-      if (r.status === 'running') { renderEval(); schedulePoll(); } else { running = false; renderEval(); }
+      if (r.status === 'running') { renderEval(); schedulePoll(); } else {
+        // Backend выполняет оценку синхронно: результат уже готов — статус и балл берём из ответа Backend, без пересчёта.
+        running = false; renderEval();
+        try { conv = await getConversation(id, { signal: sig() }); renderHead(); renderEval(); } catch (x) { if (isAbort(x)) return; }   // статус и итог диалога — снова из Backend
+        if (r.status === 'done') toast(t('ws.eval.done'));
+      }
     } catch (e) {
       if (isAbort(e)) return;
       running = false; evErr = e; renderEval();

@@ -1,20 +1,18 @@
-// Единая точка для всех обращений к Backend (FastAPI, разрабатывается отдельно).
-// Все запросы Workspace идут ТОЛЬКО через этот файл. Meta AI вызывается на Backend, frontend к нему не обращается.
+// Единая точка для всех обращений Workspace к данным. Meta AI вызывает только Backend; ключа во Frontend нет.
 //
-// Режимы:
-//   demo — Mock Adapter (js/workspace/mock/), данные вымышленные, в UI помечаются «Демо»;
-//   api  — реальный Backend: window.CQA_API_BASE или http://localhost:8001/api/v1.
-// В режиме api ошибки НЕ маскируются моками: UI показывает состояние ошибки.
-// Контракты (временные, предложение frontend, не согласованы с Backend): docs/api-contract.md.
-import * as mock from './workspace/mock/index.js';
+// Режимы (индикатор в шапке Workspace, localStorage["cqa-api-mode"]):
+//   demo — Mock Adapter (js/mockAdapter.js): вымышленные данные, в UI всегда помечены «Демо»;
+//   api  — Real API Adapter (js/realApiAdapter.js): настоящий Backend (js/config.js: база по умолчанию http://localhost:8001/api).
+// В режиме api ошибки НИКОГДА не маскируются моками: UI показывает состояние ошибки или «не поддерживается Backend».
+// Контракт: docs/api-contract.md, интеграция: docs/backend-integration.md.
+import { MODE_KEY, DEFAULT_API_BASE, getApiBase } from './config.js';
+import { ApiError, isAbort, request } from './http.js';
+import * as mockAdapter from './mockAdapter.js';
+import * as realAdapter from './realApiAdapter.js';
 
-export const API_BASE_DEFAULT = 'http://localhost:8001/api/v1';
-const MODE_KEY = 'cqa-api-mode';
-const TIMEOUT_MS = 12000;
+export { ApiError, isAbort, request, getApiBase };
+export const API_BASE_DEFAULT = DEFAULT_API_BASE;
 
-export const getApiBase = () => ((typeof window !== 'undefined' && window.CQA_API_BASE) || API_BASE_DEFAULT).replace(/\/+$/, '');
-
-// ---------- режим ----------
 let mode = 'demo';
 try { if (localStorage.getItem(MODE_KEY) === 'api') mode = 'api'; } catch { /* storage недоступен */ }
 const modeListeners = new Set();
@@ -28,103 +26,27 @@ export function setMode(next) {
 }
 export function onModeChange(fn) { modeListeners.add(fn); return () => modeListeners.delete(fn); }
 
-// ---------- ошибки и низкоуровневый запрос ----------
-export class ApiError extends Error {
-  constructor(kind, status = 0, url = '', detail = '') {
-    super(`API ${kind}${status ? ` ${status}` : ''}`);
-    this.name = 'ApiError';
-    this.kind = kind;       // 'network' | 'timeout' | 'http'
-    this.status = status;
-    this.url = url;
-    this.detail = detail;   // сообщение Backend (FastAPI: {"detail": ...}), если есть
-  }
-}
-export const isAbort = (e) => e?.name === 'AbortError';
-const abortError = () => new DOMException('Aborted', 'AbortError');
+const A = () => (mode === 'demo' ? mockAdapter : realAdapter);
 
-const sleep = (ms, signal) => new Promise((resolve, reject) => {
-  if (signal?.aborted) return reject(abortError());
-  const id = setTimeout(resolve, ms);
-  signal?.addEventListener('abort', () => { clearTimeout(id); reject(abortError()); }, { once: true });
-});
-
-const clean = (obj) => Object.fromEntries(Object.entries(obj || {}).filter(([, v]) => v != null && v !== ''));
-
-export async function request(path, { method = 'GET', query, body, signal, timeout = TIMEOUT_MS } = {}) {
-  const url = new URL(`${getApiBase()}${path}`);
-  Object.entries(clean(query)).forEach(([k, v]) => url.searchParams.set(k, v));
-  const ctl = new AbortController();
-  const forward = () => ctl.abort();
-  signal?.addEventListener('abort', forward, { once: true });
-  let timedOut = false;
-  const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, timeout);
-  let res;
-  try {
-    res = await fetch(url, {
-      method,
-      headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
-      signal: ctl.signal,
-    });
-  } catch (e) {
-    if (signal?.aborted) throw e;                       // отмена устаревшего запроса — не ошибка Backend
-    throw new ApiError(timedOut ? 'timeout' : 'network', 0, url.origin);
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener('abort', forward);
-  }
-  if (!res.ok) {
-    let detail = '';
-    try { const j = await res.json(); detail = typeof j?.detail === 'string' ? j.detail : JSON.stringify(j?.detail ?? ''); } catch { /* тело не JSON */ }
-    throw new ApiError('http', res.status, url.origin, detail);
-  }
-  return res.status === 204 ? null : res.json();
-}
-
-// Единая развилка demo / api. demo-функции синхронны и живут в mock/; UI о моках не знает.
-async function call({ demo, path, method = 'GET', query, body, signal, delay = 260 }) {
-  if (mode === 'demo') {
-    await sleep(delay, signal);
-    try {
-      return { ...demo(), meta: { source: 'mock' } };
-    } catch (e) {
-      if (e?.name === 'MockHttp') throw new ApiError('http', e.status, 'demo', e.message);
-      throw e;
-    }
-  }
-  const data = await request(path, { method, query, body, signal });
-  return { ...(data || {}), meta: { ...(data?.meta || {}), source: 'api' } };
-}
-const enc = encodeURIComponent;
-
-// ---------- Overview ----------
-export const getOverview = ({ days = 30, signal } = {}) => call({ demo: () => mock.overview(days), path: '/overview', query: { days }, signal, delay: 320 });
-
-// ---------- Conversations ----------
-export const getConversations = (params = {}, { signal } = {}) => call({ demo: () => mock.conversations(params), path: '/conversations', query: params, signal });
-export const getConversation = (id, { signal } = {}) => call({ demo: () => mock.conversation(id), path: `/conversations/${enc(id)}`, signal });
-export const assignOperator = (id, operator_id, { signal } = {}) => call({ demo: () => mock.assignOperator(id, { operator_id }), path: `/conversations/${enc(id)}/operator`, method: 'PUT', body: { operator_id }, signal, delay: 300 });
-// Endpoint импорта НЕ согласован с Backend — предложение (docs/api-contract.md).
-export const importConversations = (body, { signal } = {}) => call({ demo: () => mock.importConversations(body), path: '/conversations/import', method: 'POST', body, signal, delay: 500 });
-
-// ---------- Evaluations ----------
-export const getEvaluations = (params = {}, { signal } = {}) => call({ demo: () => mock.evaluations(params), path: '/evaluations', query: params, signal });
-export const getEvaluation = (id, { signal } = {}) => call({ demo: () => mock.evaluation(id), path: `/evaluations/${enc(id)}`, signal, delay: 120 });
-export const runEvaluation = (body, { signal } = {}) => call({ demo: () => mock.runEvaluation(body), path: `/conversations/${enc(body.conversation_id)}/evaluations`, method: 'POST', body: { checklist_version: body.checklist_version }, signal, delay: 350 });
-
-// ---------- Operators ----------
-export const getOperators = (params = {}, { signal } = {}) => call({ demo: () => mock.operators(params), path: '/operators', query: params, signal });
-export const getOperator = (id, { signal } = {}) => call({ demo: () => mock.operator(id), path: `/operators/${enc(id)}`, signal });
-
-// ---------- Appeals ----------
-export const getAppeals = (params = {}, { signal } = {}) => call({ demo: () => mock.appeals(params), path: '/appeals', query: params, signal });
-export const getAppeal = (id, { signal } = {}) => call({ demo: () => mock.appeal(id), path: `/appeals/${enc(id)}`, signal });
-export const createAppeal = (body, { signal } = {}) => call({ demo: () => mock.createAppeal(body), path: '/appeals', method: 'POST', body, signal, delay: 350 });
-export const decideAppeal = (id, body, { signal } = {}) => call({ demo: () => mock.decideAppeal(id, body), path: `/appeals/${enc(id)}/decision`, method: 'POST', body, signal, delay: 350 });
-
-// ---------- Checklists ----------
-export const getChecklists = ({ signal } = {}) => call({ demo: () => mock.checklists(), path: '/checklists', signal });
-export const saveChecklist = (body, { signal } = {}) => call({ demo: () => mock.saveChecklist(body), path: '/checklists', method: 'POST', body, signal, delay: 400 });
+export const getOverview = (o) => A().getOverview(o);
+export const getConversations = (p, o) => A().getConversations(p, o);
+export const getConversation = (id, o) => A().getConversation(id, o);
+export const assignOperator = (id, op, o) => A().assignOperator(id, op, o);
+export const importConversations = (b, o) => A().importConversations(b, o);
+export const getEvaluations = (p, o) => A().getEvaluations(p, o);
+export const getEvaluation = (id, o) => A().getEvaluation(id, o);
+export const runEvaluation = (b, o) => A().runEvaluation(b, o);
+export const getOperators = (p, o) => A().getOperators(p, o);
+export const getOperator = (id, o) => A().getOperator(id, o);
+export const getAppeals = (p, o) => A().getAppeals(p, o);
+export const getAppeal = (id, o) => A().getAppeal(id, o);
+export const createAppeal = (b, o) => A().createAppeal(b, o);
+export const decideAppeal = (id, b, o) => A().decideAppeal(id, b, o);
+export const getChecklists = (o) => A().getChecklists(o);
+export const saveChecklist = (b, o) => A().saveChecklist(b, o);
+export const activateChecklist = (id, o) => A().activateChecklist(id, o);
+export const getHealth = (o) => realAdapter.health(o);
+export { mockAdapter, realAdapter };
 
 // ---------- Landing: демо-превью (не Workspace) ----------
 // isDemo=true => в UI показывается пометка «Демо».

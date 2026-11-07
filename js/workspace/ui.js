@@ -18,7 +18,7 @@ export const scoreBadge = (score) => `<span class="score score--${band(score)}">
 export const shortDate = (iso) => formatDate(iso, { day: 'numeric', month: 'short' });
 export const dayLabel = (iso) => formatDate(`${String(iso).slice(0, 10)}T12:00:00`, { day: 'numeric', month: 'short' });
 export const clock = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-export const dateTime = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '—' : `${formatDate(d, { day: 'numeric', month: 'short' })} ${clock(d)}`; };
+export const dateTime = (iso) => { if (iso == null || iso === '') return '—'; const d = new Date(iso); return Number.isNaN(+d) ? '—' : `${formatDate(d, { day: 'numeric', month: 'short' })} ${clock(d)}`; };
 
 export const chip = (kind, label) => `<span class="chip chip--${esc(kind)}">${esc(label)}</span>`;
 export const langTag = (l) => `<span class="ltag" lang="${esc(l)}">${esc(String(l).toUpperCase())}</span>`;
@@ -71,8 +71,9 @@ export const loadingList = () => `<div class="state-loading" aria-busy="true"><p
 export const emptyState = (title, text, action = '') => `<div class="state state--empty">${icon('inbox', 'ico--lg')}<h3>${esc(title)}</h3><p>${esc(text)}</p>${action}</div>`;
 
 export function errorText(err, base = '') {
+  if (err?.kind === 'unsupported') return t('ws.state.unsupported', { what: err.detail || '' });
   if (err?.kind === 'http') {
-    const key = { 404: 'ws.state.notFound', 409: 'ws.state.conflict', 422: 'ws.state.invalid', 503: 'ws.state.aiDown' }[err.status];
+    const key = { 404: 'ws.state.notFound', 409: 'ws.state.conflict', 422: 'ws.state.invalid', 503: 'ws.state.aiDown', 502: 'ws.state.modelDown', 429: 'ws.state.modelDown', 504: 'ws.state.modelDown' }[err.status];
     return key ? t(key) : t('ws.state.errorHttp', { code: err.status });
   }
   if (err?.kind === 'timeout') return t('ws.state.errorTimeout', { url: base });
