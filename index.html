@@ -40,20 +40,35 @@
     </defs>
   </svg>
 
-  <!-- Верхняя панель: бренд, подпись, переключатель языка (на всех экранах) -->
+  <!-- Freedom Glass Navigation: плавающая стеклянная панель, вкладки разделов, язык, вход; на мобильных — меню -->
   <header class="topbar" id="topbar">
-    <a class="brand" href="#/welcome" id="brand-link">
-      <img src="assets/freedom-logo.png" alt="" width="26" height="30">
-      <span>Freedom</span>
-    </a>
-    <div class="topbar__meta">
-      <span>CQA Insight</span><i aria-hidden="true"></i><span data-i18n="brand.tagline"></span>
+    <div class="topbar__bar">
+      <a class="brand" href="#/welcome" id="brand-link">
+        <img src="assets/freedom-logo.png" alt="" width="26" height="30">
+        <span>Freedom</span>
+      </a>
+      <nav class="topbar__nav" data-i18n-attr="aria-label:nav.label">
+        <a class="navlink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+        <a class="navlink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+        <a class="navlink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+        <a class="navlink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+      </nav>
+      <div class="topbar__right">
+        <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
+          <button type="button" data-lang="ru" lang="ru">RU</button>
+          <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+          <button type="button" data-lang="en" lang="en">EN</button>
+        </div>
+        <button class="btn topbar__login" type="button" data-nav="login" data-i18n="nav.login"></button>
+        <button class="menubtn" type="button" id="menu-btn" aria-expanded="false" aria-controls="mobile-nav" data-i18n-attr="aria-label:nav.menu"><i></i><i></i><i></i></button>
+      </div>
     </div>
-    <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
-      <button type="button" data-lang="ru" lang="ru">RU</button>
-      <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
-      <button type="button" data-lang="en" lang="en">EN</button>
-    </div>
+    <nav class="mobilenav" id="mobile-nav" hidden data-i18n-attr="aria-label:nav.label">
+      <a class="navlink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+      <a class="navlink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+      <a class="navlink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+      <a class="navlink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+    </nav>
   </header>
 
   <main id="app">
@@ -131,7 +146,7 @@
 
           <!-- Правая 3D AI-плашка: подготовленное изображение (assets/ai-panel.webp, PNG fallback), лёгкий floating -->
           <div class="hero__panel floaty floaty--b" aria-hidden="true">
-            <picture><source type="image/webp" srcset="assets/ai-panel.webp"><img class="aipanel" src="assets/ai-panel.png" width="640" height="470" alt="" draggable="false" decoding="async" fetchpriority="high"></picture>
+            <div class="aitilt" id="aitilt"><picture><source type="image/webp" srcset="assets/ai-panel.webp"><img class="aipanel" src="assets/ai-panel.png" width="640" height="470" alt="" draggable="false" decoding="async" fetchpriority="high"></picture></div>
           </div>
         </div>
 
@@ -367,8 +382,32 @@
       </section>
 
       <footer class="footer">
-        <strong>CQA Insight</strong>
-        <span data-i18n="footer.text"></span>
+        <div class="fwave" aria-hidden="true"><div class="fwave__track"><svg viewBox="0 0 1200 60" preserveAspectRatio="none" focusable="false"><path d="M5 25.0V35.0M15 21.2V38.8M25 21.3V38.7M35 20.7V39.3M45 22.6V37.4M55 24.6V35.4M65 23.5V36.5M75 23.2V36.8M85 24.0V36.0M95 23.5V36.5M105 18.6V41.4M115 14.3V45.7M125 13.8V46.2M135 6.9V53.1M145 8.5V51.5M155 13.6V46.4M165 17.3V42.7M175 24.9V35.1M185 17.4V42.6M195 12.6V47.4M205 5.3V54.7M215 5.1V54.9M225 5.5V54.5M235 11.0V49.0M245 17.4V42.6M255 22.4V37.6M265 22.1V37.9M275 19.4V40.6M285 16.9V43.1M295 15.8V44.2M305 15.5V44.5M315 19.3V40.7M325 22.7V37.3M335 24.5V35.5M345 25.0V35.0M355 24.0V36.0M365 21.0V39.0M375 17.6V42.4M385 16.2V43.8M395 13.5V46.5M405 14.7V45.3M415 16.4V43.6M425 22.4V37.6M435 22.0V38.0M445 14.5V45.5M455 8.0V52.0M465 8.1V51.9M475 5.3V54.7M485 10.1V49.9M495 14.1V45.9M505 18.9V41.1M515 24.7V35.3M525 17.3V42.7M535 13.1V46.9M545 11.4V48.6M555 8.5V51.5M565 13.0V47.0M575 17.4V42.6M585 20.8V39.2M595 24.0V36.0M605 24.1V35.9M615 23.7V36.3M625 24.4V35.6M635 23.8V36.2M645 22.0V38.0M655 20.8V39.2M665 19.7V40.3M675 22.1V37.9M685 24.7V35.3M695 20.2V39.8M705 15.3V44.7M715 10.3V49.7M725 10.1V49.9M735 11.1V48.9M745 12.1V47.9M755 14.8V45.2M765 22.4V37.6M775 20.4V39.6M785 15.6V44.4M795 12.4V47.6M805 5.4V54.6M815 8.1V51.9M825 13.1V46.9M835 16.1V43.9M845 21.3V38.7M855 24.6V35.4M865 21.1V38.9M875 19.6V40.4M885 19.5V40.5M895 20.2V39.8M905 23.0V37.0M915 24.8V35.2M925 23.8V36.2M935 24.3V35.7M945 23.3V36.7M955 19.6V40.4M965 14.7V45.3M975 14.8V45.2M985 13.7V46.3M995 11.5V48.5M1005 15.3V44.7M1015 18.2V41.8M1025 24.4V35.6M1035 18.4V41.6M1045 11.2V48.8M1055 3.9V56.1M1065 6.6V53.4M1075 6.0V54.0M1085 9.1V50.9M1095 14.5V45.5M1105 22.9V37.1M1115 21.2V38.8M1125 18.4V41.6M1135 16.5V43.5M1145 14.2V45.8M1155 16.0V44.0M1165 18.7V41.3M1175 21.1V38.9M1185 24.1V35.9M1195 24.9V35.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><svg viewBox="0 0 1200 60" preserveAspectRatio="none" focusable="false"><path d="M5 25.0V35.0M15 21.2V38.8M25 21.3V38.7M35 20.7V39.3M45 22.6V37.4M55 24.6V35.4M65 23.5V36.5M75 23.2V36.8M85 24.0V36.0M95 23.5V36.5M105 18.6V41.4M115 14.3V45.7M125 13.8V46.2M135 6.9V53.1M145 8.5V51.5M155 13.6V46.4M165 17.3V42.7M175 24.9V35.1M185 17.4V42.6M195 12.6V47.4M205 5.3V54.7M215 5.1V54.9M225 5.5V54.5M235 11.0V49.0M245 17.4V42.6M255 22.4V37.6M265 22.1V37.9M275 19.4V40.6M285 16.9V43.1M295 15.8V44.2M305 15.5V44.5M315 19.3V40.7M325 22.7V37.3M335 24.5V35.5M345 25.0V35.0M355 24.0V36.0M365 21.0V39.0M375 17.6V42.4M385 16.2V43.8M395 13.5V46.5M405 14.7V45.3M415 16.4V43.6M425 22.4V37.6M435 22.0V38.0M445 14.5V45.5M455 8.0V52.0M465 8.1V51.9M475 5.3V54.7M485 10.1V49.9M495 14.1V45.9M505 18.9V41.1M515 24.7V35.3M525 17.3V42.7M535 13.1V46.9M545 11.4V48.6M555 8.5V51.5M565 13.0V47.0M575 17.4V42.6M585 20.8V39.2M595 24.0V36.0M605 24.1V35.9M615 23.7V36.3M625 24.4V35.6M635 23.8V36.2M645 22.0V38.0M655 20.8V39.2M665 19.7V40.3M675 22.1V37.9M685 24.7V35.3M695 20.2V39.8M705 15.3V44.7M715 10.3V49.7M725 10.1V49.9M735 11.1V48.9M745 12.1V47.9M755 14.8V45.2M765 22.4V37.6M775 20.4V39.6M785 15.6V44.4M795 12.4V47.6M805 5.4V54.6M815 8.1V51.9M825 13.1V46.9M835 16.1V43.9M845 21.3V38.7M855 24.6V35.4M865 21.1V38.9M875 19.6V40.4M885 19.5V40.5M895 20.2V39.8M905 23.0V37.0M915 24.8V35.2M925 23.8V36.2M935 24.3V35.7M945 23.3V36.7M955 19.6V40.4M965 14.7V45.3M975 14.8V45.2M985 13.7V46.3M995 11.5V48.5M1005 15.3V44.7M1015 18.2V41.8M1025 24.4V35.6M1035 18.4V41.6M1045 11.2V48.8M1055 3.9V56.1M1065 6.6V53.4M1075 6.0V54.0M1085 9.1V50.9M1095 14.5V45.5M1105 22.9V37.1M1115 21.2V38.8M1125 18.4V41.6M1135 16.5V43.5M1145 14.2V45.8M1155 16.0V44.0M1165 18.7V41.3M1175 21.1V38.9M1185 24.1V35.9M1195 24.9V35.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div>
+        <div class="container footer__grid">
+          <div class="footer__brand">
+            <div class="footer__logo"><img src="assets/freedom-logo.png" alt="" width="30" height="35"><span>Freedom</span></div>
+            <strong>CQA Insight</strong>
+            <p data-i18n="footer.desc"></p>
+          </div>
+          <nav class="footer__nav" data-i18n-attr="aria-label:nav.label">
+          <a class="flink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+          <a class="flink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+          <a class="flink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+          <a class="flink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+          </nav>
+          <div class="footer__side">
+            <div class="langswitch langswitch--dark" role="group" data-i18n-attr="aria-label:common.langLabel">
+              <button type="button" data-lang="ru" lang="ru">RU</button>
+              <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+              <button type="button" data-lang="en" lang="en">EN</button>
+            </div>
+            <button class="btn btn--glassdark btn--arrow" type="button" data-nav="login">
+              <span data-i18n="hero.cta"></span>
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </button>
+            <small data-i18n="footer.text"></small>
+          </div>
+        </div>
       </footer>
     </div>
 

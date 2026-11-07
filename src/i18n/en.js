@@ -8,6 +8,7 @@ export default {
     langLabel: 'Interface language',
   },
   brand: { tagline: 'AI Quality Analysis' },
+  nav: { label: 'Sections', about: 'About', how: 'How it works', features: 'Features', analytics: 'Analytics', login: 'Sign in', menu: 'Menu' },
   hero: {
     desc: 'Customer dialogue quality analysis powered by artificial intelligence',
     cta: 'Get started',
@@ -90,7 +91,7 @@ export default {
     text: 'Sign in to CQA Insight and see how evaluation works.',
     button: 'Get started',
   },
-  footer: { text: 'A prototype built for the Freedom Broker CQA Hackathon.' },
+  footer: { text: 'A prototype built for the Freedom Broker CQA Hackathon.', desc: 'An AI platform that scores the quality of customer dialogues in Russian, Kazakh and English.' },
   login: {
     title: 'Sign in to CQA Insight',
     email: 'Email',

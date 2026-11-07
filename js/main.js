@@ -47,6 +47,7 @@ async function show(name) {
   }
 
   current = name;
+  document.body.dataset.view = name;
   to.hidden = false;
   window.scrollTo(0, 0);
   if (name === 'welcome') landing.enter();
@@ -85,6 +86,7 @@ window.addEventListener('hashchange', () => show(routeFromHash()));
 const first = routeFromHash();
 if (location.hash && `#/${first}` !== location.hash) history.replaceState(null, '', `#/${first}`);
 current = first;
+document.body.dataset.view = first;
 Object.entries(views).forEach(([name, v]) => { v.hidden = name !== first; });
 if (first === 'welcome') landing.enter();
 requestAnimationFrame(() => {

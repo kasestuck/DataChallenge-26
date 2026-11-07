@@ -10,6 +10,7 @@ export default {
     langLabel: 'Язык интерфейса',
   },
   brand: { tagline: 'AI-анализ качества' },
+  nav: { label: 'Разделы', about: 'О проекте', how: 'Как это работает', features: 'Возможности', analytics: 'Аналитика', login: 'Войти', menu: 'Меню' },
   hero: {
     desc: 'Анализ качества клиентских диалогов с помощью искусственного интеллекта',
     cta: 'Начать работу',
@@ -92,7 +93,7 @@ export default {
     text: 'Войдите в CQA Insight и посмотрите, как работает оценка.',
     button: 'Начать работу',
   },
-  footer: { text: 'Прототип, созданный для хакатона Freedom Broker CQA.' },
+  footer: { text: 'Прототип, созданный для хакатона Freedom Broker CQA.', desc: 'AI-платформа оценки качества клиентских диалогов на русском, казахском и английском языках.' },
   login: {
     title: 'Вход в CQA Insight',
     email: 'Email',

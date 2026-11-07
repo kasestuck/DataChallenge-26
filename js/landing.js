@@ -237,7 +237,7 @@ export function initLanding() {
 
   // секции вне экрана: бесконечные CSS-анимации на паузе (класс is-vis)
   const visIO = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('is-vis', e.isIntersecting)), { rootMargin: '120px' });
-  $$('.section', root).forEach((s) => visIO.observe(s));
+  $$('.section, .footer', root).forEach((s) => visIO.observe(s));
 
   // дуга в Final CTA
   const ctaIO = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('arc-in'); ctaIO.disconnect(); } }), { threshold: 0.2 });
@@ -271,34 +271,34 @@ export function initLanding() {
     });
   };
 
-  // 3D-гарнитура и стеклянная панель: наклон от курсора (точный указатель, без reduced-motion, не на мобильных)
+  // Интерактив: гарнитура и AI-плашка следуют за курсором (общий источник tx/ty), Dashboard — свой наклон.
+  // Без постоянного rAF: события + один отложенный кадр на пачку pointermove, плавность даёт CSS-transition.
   const fine = matchMedia('(hover: hover) and (pointer: fine)');
   const tiltOn = () => fine.matches && !reduceMq.matches && innerWidth > 768;
-  const hs = $('#hs3d'), heroEl = $('.hero', root);
+  const hs = $('#hs3d'), ai3 = $('#aitilt'), heroEl = $('.hero', root), win = $('#preview');
   let tx = 0, ty = 0, pending = false, tracking = false;
   const applyTilt = () => {
     pending = false;
     hs.style.setProperty('--px', tx.toFixed(3)); hs.style.setProperty('--py', ty.toFixed(3));
     hs.style.setProperty('--hry', `${(tx * 8).toFixed(2)}deg`); hs.style.setProperty('--hrx', `${(-ty * 5).toFixed(2)}deg`);
+    ai3.style.setProperty('--pdx', `${(tx * 14).toFixed(1)}px`); ai3.style.setProperty('--pdy', `${(ty * 10).toFixed(1)}px`);
+    ai3.style.setProperty('--pry', `${(tx * 5).toFixed(2)}deg`); ai3.style.setProperty('--prx', `${(-ty * 5).toFixed(2)}deg`);
   };
   const resetTilt = () => {
     tracking = false; tx = ty = 0;
-    hs.classList.remove('is-tracking');
+    hs.classList.remove('is-tracking'); ai3.classList.remove('is-tracking');
     ['--px', '--py', '--hry', '--hrx'].forEach((k) => hs.style.removeProperty(k));
+    ['--pdx', '--pdy', '--pry', '--prx'].forEach((k) => ai3.style.removeProperty(k));
   };
-  heroEl.addEventListener('pointermove', (e) => {
+  const onHeroMove = (e) => {
     if (!tiltOn() || e.pointerType !== 'mouse') return;
     const r = heroEl.getBoundingClientRect();
     tx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
     ty = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
-    if (!tracking) { tracking = true; hs.classList.add('is-tracking'); }
+    if (!tracking) { tracking = true; hs.classList.add('is-tracking'); ai3.classList.add('is-tracking'); }
     if (!pending) { pending = true; requestAnimationFrame(applyTilt); }
-  });
-  heroEl.addEventListener('pointerleave', resetTilt);
-
-  // Dashboard preview: лёгкий наклон за курсором (до ±4°), блик и parallax KPI; touch/reduced-motion — статично
-  const win = $('#preview');
-  win.addEventListener('pointermove', (e) => {
+  };
+  const onWinMove = (e) => {
     if (!tiltOn() || e.pointerType !== 'mouse') return;
     const r = win.getBoundingClientRect();
     const nx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1), ny = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
@@ -306,11 +306,61 @@ export function initLanding() {
     win.style.setProperty('--ry', `${(nx * 4).toFixed(2)}deg`); win.style.setProperty('--rx', `${(-ny * 4).toFixed(2)}deg`);
     win.style.setProperty('--nx', nx.toFixed(3)); win.style.setProperty('--ny', ny.toFixed(3));
     win.style.setProperty('--gx', `${((nx + 1) * 50).toFixed(1)}%`); win.style.setProperty('--gy', `${((ny + 1) * 50).toFixed(1)}%`);
-  });
-  win.addEventListener('pointerleave', () => {
+  };
+  const onWinLeave = () => {
     win.classList.remove('is-tracking');
     ['--rx', '--ry', '--nx', '--ny'].forEach((k) => win.style.removeProperty(k));
+  };
+
+  // Header / Footer навигация: плавный скролл к разделам, активный пункт через IntersectionObserver, мобильное меню
+  const SECTIONS = { about: '#about', how: '#how', features: '#features', analytics: '#preview-section' };
+  const menuBtn = $('#menu-btn'), menu = $('#mobile-nav');
+  const setActive = (key) => $$('.navlink').forEach((a) => {
+    const on = a.dataset.scroll === key;
+    a.classList.toggle('is-active', on);
+    if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
   });
+  const closeMenu = (focusBtn) => {
+    if (menu.hidden) return;
+    menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) menuBtn.focus();
+  };
+  const onDocClick = (e) => {
+    const link = e.target.closest('[data-scroll]');
+    if (link && SECTIONS[link.dataset.scroll]) {
+      e.preventDefault();
+      $(SECTIONS[link.dataset.scroll], root).scrollIntoView({ behavior: reduceMq.matches ? 'auto' : 'smooth', block: 'start' });
+      closeMenu();
+      return;
+    }
+    if (!menu.hidden && !e.target.closest('.topbar')) closeMenu();
+  };
+  const onMenuBtn = () => {
+    const open = menu.hidden;
+    menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open));
+  };
+  const onKey = (e) => { if (e.key === 'Escape') closeMenu(true); };
+  const wide = matchMedia('(min-width: 1001px)');
+  const onWide = () => { if (wide.matches) closeMenu(); };
+  let activeKey = null;
+  const navIO = new IntersectionObserver((entries) => {
+    [...entries].sort((a, b) => a.isIntersecting - b.isIntersecting).forEach((e) => {
+      const key = Object.keys(SECTIONS).find((k) => SECTIONS[k] === `#${e.target.id}`);
+      if (e.isIntersecting) { activeKey = key; setActive(key); } else if (activeKey === key) { activeKey = null; setActive(null); }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+
+  // все слушатели навешиваются в enter() и снимаются в leave()
+  const binds = [
+    [heroEl, 'pointermove', onHeroMove], [heroEl, 'pointerleave', resetTilt],
+    [win, 'pointermove', onWinMove], [win, 'pointerleave', onWinLeave],
+    [document, 'click', onDocClick], [menuBtn, 'click', onMenuBtn], [document, 'keydown', onKey],
+  ];
+  const bindAll = () => { binds.forEach(([t, ty2, fn]) => t.addEventListener(ty2, fn)); wide.addEventListener('change', onWide); Object.values(SECTIONS).forEach((s) => navIO.observe($(s, root))); };
+  const unbindAll = () => {
+    binds.forEach(([t, ty2, fn]) => t.removeEventListener(ty2, fn)); wide.removeEventListener('change', onWide);
+    navIO.disconnect(); setActive(null); activeKey = null; closeMenu(); resetTilt(); onWinLeave();
+  };
 
   // перестраиваем ленту при изменении размеров/высоты контента
   let buildRaf = 0;
@@ -331,6 +381,7 @@ export function initLanding() {
   return {
     enter() {
       active = true;
+      bindAll();
       heroWave.reset();
       syncWaves();
       fish.refresh();
@@ -342,6 +393,7 @@ export function initLanding() {
     },
     leave() {
       active = false;
+      unbindAll();
       syncWaves();
       fish.destroy();
       audio.stop();
