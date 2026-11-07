@@ -244,13 +244,25 @@ export function initLanding() {
 
   // reveal on scroll
   const revealIO = new IntersectionObserver((entries) => {
-    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealIO.unobserve(e.target); } });
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); setTimeout(() => e.target.classList.add('settled'), 1400); revealIO.unobserve(e.target); } });
   }, { threshold: 0.18, rootMargin: '0px 0px -6% 0px' });
   $$('.reveal', root).forEach((n) => revealIO.observe(n));
 
   // дуга в Final CTA
   const ctaIO = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('arc-in'); ctaIO.disconnect(); } }), { threshold: 0.2 });
   ctaIO.observe($('.cta', root));
+
+  // общий фон: параллакс дальних слоёв и смещение света при прокрутке (ограниченные значения, transform/translate)
+  const rib = $('#ribbons'), glowA = $('.glow--a', rib), glowB = $('.glow--b', rib);
+  const parallax = () => {
+    const sy = reduceMq.matches ? 0 : scrollY;
+    const pr = clamp(sy / Math.max(1, root.scrollHeight - innerHeight), 0, 1);
+    rib.style.setProperty('--ry1', `${(Math.sin(sy / 1100) * 30).toFixed(1)}px`);
+    rib.style.setProperty('--ry2', `${(Math.sin(sy / 900 + 1) * 52).toFixed(1)}px`);
+    rib.style.setProperty('--ry3', `${(Math.sin(sy / 760 + 2) * 78).toFixed(1)}px`);
+    glowA.style.transform = `translate3d(${(pr * 38).toFixed(1)}vw, ${(pr * 70).toFixed(1)}vh, 0)`;
+    glowB.style.transform = `translate3d(${(-pr * 30).toFixed(1)}vw, ${(pr * -20).toFixed(1)}vh, 0)`;
+  };
 
   // scroll: лента + прозрачность topbar (один rAF на кадр)
   let ticking = false;
@@ -261,7 +273,7 @@ export function initLanding() {
       ticking = false;
       topbar.classList.toggle('is-solid', scrollY > 24);
       flow.update();
-      if (!reduceMq.matches) root.style.setProperty('--sy', `${scrollY}px`);
+      parallax();
     });
   };
 
@@ -299,6 +311,22 @@ export function initLanding() {
   });
   panel.addEventListener('pointerleave', () => { gt.classList.remove('is-tracking'); gt.style.removeProperty('--pry'); gt.style.removeProperty('--prx'); });
 
+  // Dashboard preview: лёгкий наклон за курсором (до ±4°), блик и parallax KPI; touch/reduced-motion — статично
+  const win = $('#preview');
+  win.addEventListener('pointermove', (e) => {
+    if (!tiltOn() || e.pointerType !== 'mouse') return;
+    const r = win.getBoundingClientRect();
+    const nx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1), ny = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
+    win.classList.add('is-tracking');
+    win.style.setProperty('--ry', `${(nx * 4).toFixed(2)}deg`); win.style.setProperty('--rx', `${(-ny * 4).toFixed(2)}deg`);
+    win.style.setProperty('--nx', nx.toFixed(3)); win.style.setProperty('--ny', ny.toFixed(3));
+    win.style.setProperty('--gx', `${((nx + 1) * 50).toFixed(1)}%`); win.style.setProperty('--gy', `${((ny + 1) * 50).toFixed(1)}%`);
+  });
+  win.addEventListener('pointerleave', () => {
+    win.classList.remove('is-tracking');
+    ['--rx', '--ry', '--nx', '--ny'].forEach((k) => win.style.removeProperty(k));
+  });
+
   // перестраиваем ленту при изменении размеров/высоты контента
   let buildRaf = 0;
   const rebuild = () => { cancelAnimationFrame(buildRaf); buildRaf = requestAnimationFrame(flow.build); };
@@ -324,6 +352,7 @@ export function initLanding() {
       window.addEventListener('scroll', onScroll, { passive: true });
       ro.observe(root);
       topbar.classList.toggle('is-solid', scrollY > 24);
+      parallax();
       rebuild();
     },
     leave() {

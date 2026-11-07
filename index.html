@@ -81,32 +81,35 @@
         </g>
       </svg>
 
+      <!-- Общий декоративный слой: ленты и свет проходят через всю страницу (fixed, параллакс по прокрутке) -->
+      <div class="ribbons" id="ribbons" aria-hidden="true">
+        <i class="glow glow--a"></i><i class="glow glow--b"></i>
+        <svg class="rb rb--back" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs>
+            <linearGradient id="rbA" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".35" stop-color="#4fb84f" stop-opacity=".34"/><stop offset=".72" stop-color="#7fd77f" stop-opacity=".2"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="rbB" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#9fe19f" stop-opacity=".2"/></linearGradient>
+          </defs>
+          <path d="M-120 640C260 470 640 720 1020 540S1520 380 1600 340V520C1380 590 1180 760 880 840S280 880-120 860Z" fill="url(#rbA)"/>
+          <path d="M620 -40C900 150 1240 40 1540 230V-40Z" fill="url(#rbB)"/>
+        </svg>
+        <svg class="rb rb--mid" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs>
+            <linearGradient id="rbC" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset=".3" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".6" stop-color="#6fcf6f" stop-opacity=".26"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="rbE" x1="0" x2="1"><stop offset="0" stop-color="#045333" stop-opacity="0"/><stop offset=".5" stop-color="#045333" stop-opacity=".09"/><stop offset="1" stop-color="#4fb84f" stop-opacity=".2"/></linearGradient>
+          </defs>
+          <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90V210C1320 240 1000 400 700 360S200 340-120 330Z" fill="url(#rbC)"/>
+          <path d="M-100 770C300 690 700 890 1100 750S1500 690 1580 710V800C1300 850 900 930 560 880S100 820-100 850Z" fill="url(#rbE)"/>
+        </svg>
+        <svg class="rb rb--front" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs><linearGradient id="rbD" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".4" stop-color="#4fb84f" stop-opacity=".7"/><stop offset="1" stop-color="#045333" stop-opacity="0"/></linearGradient></defs>
+          <path d="M-60 520C300 360 700 640 1060 440S1500 300 1520 280" fill="none" stroke="url(#rbD)" stroke-width="1.6"/>
+          <path d="M-60 560C320 410 700 690 1060 490S1480 350 1520 330" fill="none" stroke="url(#rbD)" stroke-width="1" opacity=".5"/>
+          <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.2"/>
+        </svg>
+      </div>
+
       <!-- 1. Hero -->
       <section class="hero" aria-labelledby="hero-title">
-        <div class="ribbons" aria-hidden="true">
-          <svg class="rb rb--back" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-            <defs>
-              <linearGradient id="rbA" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".35" stop-color="#4fb84f" stop-opacity=".34"/><stop offset=".72" stop-color="#7fd77f" stop-opacity=".2"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
-              <linearGradient id="rbB" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#9fe19f" stop-opacity=".2"/></linearGradient>
-            </defs>
-            <path d="M-120 640C260 470 640 720 1020 540S1520 380 1600 340V520C1380 590 1180 760 880 840S280 880-120 860Z" fill="url(#rbA)"/>
-            <path d="M620 -40C900 150 1240 40 1540 230V-40Z" fill="url(#rbB)"/>
-          </svg>
-          <svg class="rb rb--mid" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-            <defs>
-              <linearGradient id="rbC" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset=".3" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".6" stop-color="#6fcf6f" stop-opacity=".26"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
-              <linearGradient id="rbE" x1="0" x2="1"><stop offset="0" stop-color="#045333" stop-opacity="0"/><stop offset=".5" stop-color="#045333" stop-opacity=".09"/><stop offset="1" stop-color="#4fb84f" stop-opacity=".2"/></linearGradient>
-            </defs>
-            <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90V210C1320 240 1000 400 700 360S200 340-120 330Z" fill="url(#rbC)"/>
-            <path d="M-100 770C300 690 700 890 1100 750S1500 690 1580 710V800C1300 850 900 930 560 880S100 820-100 850Z" fill="url(#rbE)"/>
-          </svg>
-          <svg class="rb rb--front" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-            <defs><linearGradient id="rbD" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".4" stop-color="#4fb84f" stop-opacity=".7"/><stop offset="1" stop-color="#045333" stop-opacity="0"/></linearGradient></defs>
-            <path d="M-60 520C300 360 700 640 1060 440S1500 300 1520 280" fill="none" stroke="url(#rbD)" stroke-width="1.6"/>
-            <path d="M-60 560C320 410 700 690 1060 490S1480 350 1520 330" fill="none" stroke="url(#rbD)" stroke-width="1" opacity=".5"/>
-            <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.2"/>
-          </svg>
-        </div>
 
         <div class="hero__main">
           <canvas class="wave" id="wave" aria-hidden="true"></canvas>
