@@ -391,3 +391,27 @@ em.muted { font-style: normal; }
 @media (prefers-reduced-motion: reduce) {
   .msg.is-hl { animation: none; background: #fff0b8; } .spin { animation-duration: 2.4s; } .modal, .toast { animation: none; }
 }
+
+/* ---------- Операторы ---------- */
+.ltags { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.qual { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.qual--high { background: var(--c-ok-bg); color: #1c7a3a; } .qual--mid { background: var(--c-warn-bg); color: var(--c-warn); } .qual--low { background: #fde8e6; color: var(--c-error); } .qual--none { background: #eef3f0; color: var(--c-muted); }
+.neg { color: var(--c-error); }
+.dt small { font-size: 12px; }
+.banner--info { background: var(--c-info-bg); color: var(--c-info); }
+.banner a { color: inherit; font-weight: 800; }
+.minis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 14px; }
+.mini { display: grid; gap: 4px; padding: 12px 14px; background: #fff; border: 1px solid var(--c-line); border-radius: 14px; box-shadow: var(--sh-1); }
+.mini span { font-size: 12px; font-weight: 700; color: var(--c-muted); } .mini b { font-size: 22px; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+.mini--bad b { color: var(--c-error); }
+.opr__grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; margin-top: 12px; }
+.opr__wide { grid-column: 1 / -1; }
+.sub { margin: 10px 0 6px; font-size: 13px; color: var(--c-muted); }
+.cstats { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.cstat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; }
+.cstat__n { font-weight: 700; color: var(--c-ink); } .cstat__v { font-weight: 800; font-variant-numeric: tabular-nums; }
+.cstat__bar { grid-column: 1 / -1; display: block; height: 8px; border-radius: 999px; background: #e9f1ec; overflow: hidden; }
+.cstat__fill { display: block; height: 100%; border-radius: 999px; background: var(--c-green); } .cstat__fill--bad { background: #e0675d; }
+.row--ah { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto auto; }
+@media (max-width: 1100px) { .opr__grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { .row--ah { grid-template-columns: minmax(0, 1fr) auto; } .row--ah .row__op { grid-column: 1 / -1; order: 5; } }
