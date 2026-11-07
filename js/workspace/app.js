@@ -1,13 +1,26 @@
 // CQA Workspace: оболочка (sidebar, topbar, режим данных, меню проверяющего) и маршрутизация разделов.
 // Подключается из main.js: enter() вызывается при показе view «dashboard», leave() — при уходе.
 // Все слушатели навешиваются в enter() и снимаются в leave() (нет утечек), постоянных таймеров/rAF нет.
+// Маршруты: #/dashboard[/<раздел>[/<id>]][?query]; страницы получают ctx и возвращают { destroy, relang, search?, query? }.
 import { t, applyDom, onLangChange } from '../../src/i18n/index.js';
 import { getMode, setMode, onModeChange } from '../api.js';
+import { closeAllOverlays } from './overlay.js';
 import { mountOverview } from './pages/overview.js';
+import { mountConversations, mountConversation } from './pages/conversations.js';
 import { mountSoon } from './pages/soon.js';
+const soon = (stage) => (root) => mountSoon(root, { stage });
+const mountEvaluations = soon(2), mountEvaluation = soon(2), mountOperators = soon(3), mountOperator = soon(3);
+const mountAppeals = soon(3), mountAppealDetail = soon(3), mountChecklist = soon(3);
 
-// stage — этап разработки, в котором раздел станет рабочим (раздел «overview» готов уже сейчас)
-const SECTIONS = { overview: { stage: 1 }, conversations: { stage: 2 }, evaluations: { stage: 2 }, operators: { stage: 3 }, appeals: { stage: 3 }, checklist: { stage: 3 } };
+// list — страница списка/раздела, detail — страница объекта (#/dashboard/<раздел>/<id>)
+const SECTIONS = {
+  overview: { list: mountOverview },
+  conversations: { list: mountConversations, detail: mountConversation },
+  evaluations: { list: mountEvaluations, detail: mountEvaluation },
+  operators: { list: mountOperators, detail: mountOperator },
+  appeals: { list: mountAppeals, detail: mountAppealDetail },
+  checklist: { list: mountChecklist },
+};
 const COLLAPSE_KEY = 'cqa-ws-collapsed';
 const USER_KEY = 'cqa-demo-user';
 
@@ -26,34 +39,54 @@ export function initWorkspace() {
   const links = [...side.querySelectorAll('[data-section]')];
   const mobile = matchMedia('(max-width: 900px)');
 
-  let active = false, page = null, current = null, offs = [], searchTimer = 0;
+  let active = false, page = null, current = null, offs = [], searchTimer = 0, titleOverride = null;
 
   const on = (target, type, fn, opts) => { target.addEventListener(type, fn, opts); offs.push(() => target.removeEventListener(type, fn, opts)); };
 
-  // ---------- маршрут: #/dashboard[/section[/id]][?query] ----------
+  // ---------- маршрут ----------
   function parseRoute() {
-    const parts = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
+    const [path, qs = ''] = location.hash.replace(/^#\/?/, '').split('?');
+    const parts = path.split('/');
     const key = SECTIONS[parts[1]] ? parts[1] : 'overview';
-    return { key, id: parts[2] ? decodeURIComponent(parts[2]) : null };
+    return { key, id: parts[2] ? decodeURIComponent(parts[2]) : null, query: new URLSearchParams(qs) };
+  }
+
+  function makeCtx({ key, id, query }) {
+    return {
+      key, id, query,
+      nav: (href) => { location.hash = href.replace(/^#/, ''); },
+      // обновляет query-параметры без перемонтирования страницы и без записи в историю
+      setQuery(obj) {
+        const p = new URLSearchParams();
+        Object.entries(obj).forEach(([k, v]) => { if (v != null && v !== '') p.set(k, v); });
+        const base = `#/dashboard${key === 'overview' ? '' : `/${key}`}${id ? `/${encodeURIComponent(id)}` : ''}`;
+        history.replaceState(null, '', p.toString() ? `${base}?${p}` : base);
+      },
+      setTitle(text) { titleOverride = text; title.textContent = text; },
+    };
   }
 
   function route(focus = false) {
     if (!active) return;
-    const { key, id } = parseRoute();
-    const sig = `${key}/${id || ''}`;
-    if (sig === current) return;
+    const r = parseRoute();
+    const sig = `${r.key}/${r.id || ''}`;
+    if (sig === current) { page?.query?.(r.query); return; }   // тот же объект: только смена параметров (например, evidence)
     current = sig;
     page?.destroy();
+    closeAllOverlays();
     clearTimeout(searchTimer);
-    const isOverview = key === 'overview';
+    titleOverride = null;
+    const isOverview = r.key === 'overview';
     search.disabled = !isOverview;
     if (!isOverview) search.value = '';
     syncSearchHint();
-    links.forEach((a) => (a.dataset.section === key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-    title.textContent = t(`ws.nav.${key}`);
-    page = isOverview
-      ? mountOverview(outlet, { query: () => search.value.trim() })
-      : mountSoon(outlet, { stage: SECTIONS[key].stage });
+    links.forEach((a) => (a.dataset.section === r.key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+    title.textContent = t(`ws.nav.${r.key}`);
+    const sec = SECTIONS[r.key];
+    const mount = r.id && sec.detail ? sec.detail : sec.list;
+    const ctx = makeCtx(r);
+    // Overview использует поиск в шапке (ctx.query() → строка), остальные страницы — query-параметры из URL
+    page = mount(outlet, isOverview ? { ...ctx, query: () => search.value.trim() } : ctx);
     closeDrawer();
     window.scrollTo(0, 0);
     if (focus) title.focus({ preventScroll: true });
@@ -89,7 +122,7 @@ export function initWorkspace() {
   }
   function syncAll() {
     applyDom(ws);
-    if (page) title.textContent = t(`ws.nav.${parseRoute().key}`);
+    if (active) title.textContent = t(`ws.nav.${parseRoute().key}`);
     syncSearchHint(); syncMode(); syncCollapse(); syncUser();
   }
 
@@ -140,16 +173,16 @@ export function initWorkspace() {
     });
     on(document, 'click', (e) => { if (!menu.hidden && !e.target.closest('.ws-user')) closeMenu(); });
     on(document, 'keydown', (e) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || document.querySelector('.modal-back')) return;   // Esc закрывает модальное окно, а не меню
       if (!menu.hidden) closeMenu(true); else closeDrawer(true);
     });
     on(search, 'input', () => {
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => page?.search(search.value.trim()), 120);
+      searchTimer = setTimeout(() => page?.search?.(search.value.trim()), 120);
     });
     on(skip, 'click', () => { outlet.tabIndex = -1; outlet.focus({ preventScroll: false }); });
     on(mobile, 'change', () => { if (!mobile.matches) closeDrawer(); });
-    offs.push(onLangChange(() => { syncAll(); page?.relang(); }));
+    offs.push(onLangChange(() => { syncAll(); page?.relang?.(); }));
     offs.push(onModeChange(() => { syncMode(); current = null; route(); }));
 
     syncAll();
@@ -163,6 +196,7 @@ export function initWorkspace() {
     offs.forEach((off) => off());
     offs = [];
     page?.destroy();
+    closeAllOverlays();
     page = null;
     current = null;
     closeDrawer();

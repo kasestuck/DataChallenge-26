@@ -1,4 +1,7 @@
-export default {
+import { merge } from './merge.js';
+import wsx from './ws.en.js';
+
+const base = {
   meta: {
     title: 'CQA Insight — dialogue quality assessment',
     description: 'An AI platform that scores the quality of customer conversations, with evidence and transparent review.',
@@ -127,3 +130,5 @@ export default {
     soon: { title: 'Section in development', text: 'This section will arrive in stage {stage} of the Workspace build. The overview is available now.', stage: 'Stage {stage}', back: 'Back to overview' },
   },
 };
+
+export default { ...base, ws: merge(base.ws, wsx) };

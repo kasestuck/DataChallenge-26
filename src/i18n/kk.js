@@ -1,5 +1,8 @@
 // Қазақша. Қажетті әріптер: Ә Ғ Қ Ң Ө Ұ Ү Һ І
-export default {
+import { merge } from './merge.js';
+import wsx from './ws.kk.js';
+
+const base = {
   meta: {
     title: 'CQA Insight — диалогтар сапасын бағалау',
     description: 'Клиент диалогтарының сапасын бағалайтын AI-платформа: балдар, дәлелдер және ашық қайта қарау.',
@@ -128,3 +131,5 @@ export default {
     soon: { title: 'Бөлім әзірленуде', text: 'Бұл бөлім Workspace әзірлеуінің {stage}-кезеңінде пайда болады. Әзірге шолу қолжетімді.', stage: '{stage}-кезең', back: 'Шолуға өту' },
   },
 };
+
+export default { ...base, ws: merge(base.ws, wsx) };

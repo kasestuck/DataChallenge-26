@@ -1,6 +1,9 @@
 // Русский — язык по умолчанию и fallback для остальных словарей.
 // Заголовки секций делятся на `title` + `titleAccent` (акцент выделяется цветом/курсивом).
-export default {
+import { merge } from './merge.js';
+import wsx from './ws.ru.js';
+
+const base = {
   meta: {
     title: 'CQA Insight — оценка качества диалогов',
     description: 'AI-платформа для оценки качества клиентских диалогов: баллы, доказательства и прозрачный пересмотр.',
@@ -129,3 +132,5 @@ export default {
     soon: { title: 'Раздел в разработке', text: 'Этот раздел появится на этапе {stage} разработки Workspace. Сейчас доступен обзор.', stage: 'Этап {stage}', back: 'К обзору' },
   },
 };
+
+export default { ...base, ws: merge(base.ws, wsx) };

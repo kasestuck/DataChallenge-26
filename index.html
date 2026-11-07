@@ -43,6 +43,11 @@
       <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
       <symbol id="i-chevrons-left" viewBox="0 0 24 24"><path d="M12 7l-5 5 5 5M18 7l-5 5 5 5"/></symbol>
       <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
       <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
       <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol>
       <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
@@ -451,7 +456,7 @@
           <svg class="ico" aria-hidden="true"><use href="#i-home"/></svg><span class="ws-nav__t" data-i18n="ws.nav.overview"></span>
         </a>
         <a class="ws-nav__link" href="#/dashboard/conversations" data-section="conversations" data-i18n-attr="title:ws.nav.conversations">
-          <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg><span class="ws-nav__t" data-i18n="ws.nav.conversations"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
+          <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg><span class="ws-nav__t" data-i18n="ws.nav.conversations"></span>
         </a>
         <a class="ws-nav__link" href="#/dashboard/evaluations" data-section="evaluations" data-i18n-attr="title:ws.nav.evaluations">
           <svg class="ico" aria-hidden="true"><use href="#i-check-square"/></svg><span class="ws-nav__t" data-i18n="ws.nav.evaluations"></span><em class="ws-soon" data-i18n="ws.nav.soon"></em>
@@ -468,7 +473,8 @@
         </nav>
         <button class="ws-collapse" type="button" id="ws-collapse" aria-expanded="true"><svg class="ico" aria-hidden="true"><use href="#i-chevrons-left"/></svg><span id="ws-collapse-t"></span></button>
       </aside>
-      <div class="ws-scrim" id="ws-scrim" hidden></div>
+      <div class="toasts" id="ws-toasts" aria-live="polite"></div>
+  <div class="ws-scrim" id="ws-scrim" hidden></div>
       <div class="ws-body">
         <header class="ws-top">
           <button class="iconbtn ws-burger" type="button" id="ws-burger" aria-expanded="false" aria-controls="ws-side" data-i18n-attr="aria-label:ws.side.open"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
