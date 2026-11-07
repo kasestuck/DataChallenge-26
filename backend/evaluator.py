@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -46,10 +47,12 @@ def _transcript_field(value: str) -> str:
             .replace("<", r"\u003c").replace(">", r"\u003e"))
 
 
-def build_prompts(conversation: dict, checklist: dict, output_language: str = "ru") -> tuple[str, str]:
+def build_prompts(conversation: dict, checklist: dict, output_language: str = "ru", *,
+                  _template_bytes: bytes | None = None) -> tuple[str, str]:
     if output_language not in LANGUAGES:
         raise EvaluationInputError("INVALID_OUTPUT_LANGUAGE", "Язык объяснений должен быть ru, kk или en.")
-    system_prompt = PROMPT_PATH.read_text(encoding="utf-8").replace(
+    template_bytes = PROMPT_PATH.read_bytes() if _template_bytes is None else _template_bytes
+    system_prompt = template_bytes.decode("utf-8").replace(
         "{output_language}", LANGUAGES[output_language]
     )
     prompt_checklist = copy.deepcopy(checklist)
@@ -208,6 +211,7 @@ def get_evaluation(conn: sqlite3.Connection, evaluation_id: str) -> dict:
     result.update({
         "evaluation_id": row["evaluation_id"], "conversation_id": row["conversation_id"],
         "checklist_version_id": row["checklist_version_id"], "status": row["status"],
+        "prompt_hash": row["prompt_hash"],
         "output_language": row["output_language"], "original_total": row["original_total"],
         "final_total": row["final_total"], "created_at": row["created_at"], "updated_at": row["updated_at"],
         "conversation_snapshot": json.loads(row["conversation_snapshot_json"]),
@@ -236,7 +240,7 @@ def _partial_plan(conn: sqlite3.Connection, conversation: dict, checklist: dict,
         raise EvaluationInputError("INVALID_CRITERION_IDS", "criterion_ids должны быть уникальными ID активных критериев.")
     metadata = {"mode": "full", "requested_criterion_ids": criterion_ids,
                 "evaluated_criterion_ids": active_ids, "reused_criterion_ids": [],
-                "baseline_evaluation_id": None, "baseline_version_id": None}
+                "baseline_evaluation_id": None, "baseline_version_id": None, "baseline_prompt_hash": None}
     if criterion_ids is None:
         return checklist, {}, metadata
     # A snapshot is reusable only within the same checklist family and for this
@@ -273,6 +277,7 @@ def _partial_plan(conn: sqlite3.Connection, conversation: dict, checklist: dict,
             mode="partial" if selected_ids else "recalculation",
             evaluated_criterion_ids=selected_ids, reused_criterion_ids=list(reused),
             baseline_evaluation_id=candidate["evaluation_id"], baseline_version_id=candidate["checklist_version_id"],
+            baseline_prompt_hash=candidate["prompt_hash"],
             baseline_output_language=candidate["output_language"], change_summary=changes,
         )
         return {**checklist, "criteria": [c for c in active if c["criterion_id"] in selected]}, reused, metadata
@@ -329,7 +334,13 @@ def evaluate_conversation(conn: sqlite3.Connection, conversation_id: str, *,
         model_needed = bool([c for c in prompt_checklist["criteria"] if c.get("active", True)])
         if not model_needed:
             reevaluation["mode"] = "recalculation"
-        system_prompt, user_prompt = build_prompts(conversation, prompt_checklist, output_language)
+        # Read the file once: its exact bytes determine both the prompt and its
+        # audit hash, even if another process edits the file during this run.
+        prompt_bytes = PROMPT_PATH.read_bytes()
+        prompt_hash = hashlib.sha256(prompt_bytes).hexdigest()
+        system_prompt, user_prompt = build_prompts(
+            conversation, prompt_checklist, output_language, _template_bytes=prompt_bytes
+        )
         if model_needed and len(system_prompt) + len(user_prompt) > options.max_input_chars:
             raise EvaluationInputError(
                 "MODEL_INPUT_TOO_LARGE", "Вход превышает LLM_MAX_INPUT_CHARS; диалог не обрезался и не отправлен."
@@ -338,10 +349,10 @@ def evaluate_conversation(conn: sqlite3.Connection, conversation_id: str, *,
             client = LLMClient(conn)
         conn.execute(
             """INSERT INTO evaluations(evaluation_id,conversation_id,checklist_version_id,
-            conversation_revision,conversation_snapshot_json,status,output_language,created_at,updated_at,job_id)
-            VALUES (?,?,?,?,?,'running',?,?,?,?)""",
+            conversation_revision,conversation_snapshot_json,status,output_language,created_at,updated_at,job_id,prompt_hash)
+            VALUES (?,?,?,?,?,'running',?,?,?,?,?)""",
             (evaluation_id, conversation_id, checklist["checklist_version_id"], conversation["revision"],
-             _json(conversation), output_language, now, now, job_id),
+             _json(conversation), output_language, now, now, job_id, prompt_hash),
         )
 
     attempts: list[dict] = []
@@ -408,6 +419,7 @@ def evaluate_conversation(conn: sqlite3.Connection, conversation_id: str, *,
     result = {
         "evaluation_id": evaluation_id, "conversation_id": conversation_id,
         "checklist_version_id": checklist["checklist_version_id"], "output_language": output_language,
+        "prompt_hash": prompt_hash,
         "status": status, "criteria": criteria, "total": scores["total"],
         "sections": scores["sections"], "gross_violation": scores["gross_violation"],
         "validation_attempts": attempts, "validation_errors": errors, "raw_responses": raw_responses,

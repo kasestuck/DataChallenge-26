@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
     conversation_snapshot_json TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('pending','running','completed','needs_review','failed')),
     output_language TEXT NOT NULL DEFAULT 'ru' CHECK(output_language IN ('ru','kk','en')),
+    prompt_hash TEXT,
     original_result_json TEXT,
     final_result_json TEXT,
     original_total TEXT,
@@ -211,6 +212,7 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
     """Add audit columns to existing databases without replacing records."""
     additions = {
         "evaluations": {
+            "prompt_hash": "TEXT",
             "raw_responses_json": "TEXT NOT NULL DEFAULT '[]'",
             "validation_errors_json": "TEXT NOT NULL DEFAULT '[]'",
             "validation_attempts_json": "TEXT NOT NULL DEFAULT '[]'",

@@ -125,6 +125,7 @@ class EvaluationResponse(PublicModel):
     checklist_version_id: str
     status: Status
     output_language: OutputLanguage = "ru"
+    prompt_hash: str | None = Field(default=None, description="SHA-256 файла системного промпта этой оценки. null у старых записей; перенесённые ответы могут иметь другую версию в reevaluation.baseline_prompt_hash.")
     original: dict[str, Any] = Field(default_factory=dict, description="Неизменяемый результат исходной оценки.")
     final: dict[str, Any] = Field(default_factory=dict, description="Результат с учётом решений проверяющего.")
     decisions: list[dict[str, Any]] = Field(default_factory=list)
