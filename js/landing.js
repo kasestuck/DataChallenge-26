@@ -157,7 +157,7 @@ function catmull(pts) {
 
 function initFlow(root) {
   const svg = $('#flow'), ghost = $('#flow-ghost'), band = $('#flow-band'), line = $('#flow-line');
-  let len = 0, endY = 1, rootTop = 0;
+  let len = 0, endY = 1, rootOff = 0, lastP = -1;
 
   const box = (sel) => {
     const e = $(sel, root); if (!e) return null;
@@ -170,19 +170,6 @@ function initFlow(root) {
     const W = root.clientWidth, H = root.scrollHeight;
     if (!W || !H) return;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    // маска: лента приглушается за заголовками и абзацами, чтобы не пересекать текст
-    const mask = $('#flow-mask');
-    mask.setAttribute('x', 0); mask.setAttribute('y', 0);
-    mask.setAttribute('width', W); mask.setAttribute('height', H);
-    const mb = $('#flow-mask-base'); mb.setAttribute('width', W); mb.setAttribute('height', H);
-    const rr0 = root.getBoundingClientRect();
-    const holes = $$('.h2, .display, .section__lead, .about__text p, .preview__text p, .step h3, .step p, .cta p', root)
-      .filter((n) => n.offsetParent !== null)
-      .map((n) => {
-        const r = n.getBoundingClientRect();
-        return el('rect', { x: r.left - rr0.left - 24, y: r.top - rr0.top - 12, width: r.width + 48, height: r.height + 24, rx: 18 });
-      });
-    $('#flow-mask-holes').replaceChildren(...holes);
     const hero = box('.hero'), about = box('.about__grid'), steps = box('.steps'), bento = box('.bento'), prev = box('.appwin');
     if (!hero || !about || !steps || !bento || !prev) return;
     const x = (f) => f * W;
@@ -207,17 +194,17 @@ function initFlow(root) {
     len = line.getTotalLength();
     endY = pts.at(-1)[1];
     [band, line].forEach((p) => { p.style.strokeDasharray = `${len}`; });
+    rootOff = root.getBoundingClientRect().top + scrollY;   // кэш: на скролле layout не читаем
+    lastP = -1;
     update();
   }
 
   function update() {
     if (!len) return;
-    let p = 1;
-    if (!reduceMq.matches) {
-      rootTop = root.getBoundingClientRect().top;
-      p = clamp((-rootTop + innerHeight * 0.72) / endY, 0, 1);
-    }
-    const off = len * (1 - p);
+    const p = reduceMq.matches ? 1 : clamp((scrollY - rootOff + innerHeight * 0.72) / endY, 0, 1);
+    if (lastP >= 0 && Math.abs(p - lastP) < 0.0015) return;   // не трогаем стили без заметного сдвига
+    lastP = p;
+    const off = (len * (1 - p)).toFixed(1);
     line.style.strokeDashoffset = off;
     band.style.strokeDashoffset = off;
   }
@@ -248,18 +235,25 @@ export function initLanding() {
   }, { threshold: 0.18, rootMargin: '0px 0px -6% 0px' });
   $$('.reveal', root).forEach((n) => revealIO.observe(n));
 
+  // секции вне экрана: бесконечные CSS-анимации на паузе (класс is-vis)
+  const visIO = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('is-vis', e.isIntersecting)), { rootMargin: '120px' });
+  $$('.section', root).forEach((s) => visIO.observe(s));
+
   // дуга в Final CTA
   const ctaIO = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('arc-in'); ctaIO.disconnect(); } }), { threshold: 0.2 });
   ctaIO.observe($('.cta', root));
 
   // общий фон: параллакс дальних слоёв и смещение света при прокрутке (ограниченные значения, transform/translate)
-  const rib = $('#ribbons'), glowA = $('.glow--a', rib), glowB = $('.glow--b', rib);
+  const rib = $('#ribbons'), layers = $$('.rb', rib), glowA = $('.glow--a', rib), glowB = $('.glow--b', rib);
+  const AMP = [30, 52, 78];
+  let lastSy = -999;
   const parallax = () => {
-    const sy = reduceMq.matches ? 0 : scrollY;
+    if (reduceMq.matches || innerWidth <= 768) return;     // мобильные: статичный фон
+    const sy = scrollY;
+    if (Math.abs(sy - lastSy) < 2) return;
+    lastSy = sy;
     const pr = clamp(sy / Math.max(1, root.scrollHeight - innerHeight), 0, 1);
-    rib.style.setProperty('--ry1', `${(Math.sin(sy / 1100) * 30).toFixed(1)}px`);
-    rib.style.setProperty('--ry2', `${(Math.sin(sy / 900 + 1) * 52).toFixed(1)}px`);
-    rib.style.setProperty('--ry3', `${(Math.sin(sy / 760 + 2) * 78).toFixed(1)}px`);
+    layers.forEach((l, i) => { l.style.transform = `translate3d(0, ${(Math.sin(sy / (1100 - i * 170) + i) * AMP[i]).toFixed(1)}px, 0)`; });
     glowA.style.transform = `translate3d(${(pr * 38).toFixed(1)}vw, ${(pr * 70).toFixed(1)}vh, 0)`;
     glowB.style.transform = `translate3d(${(-pr * 30).toFixed(1)}vw, ${(pr * -20).toFixed(1)}vh, 0)`;
   };
@@ -280,7 +274,7 @@ export function initLanding() {
   // 3D-гарнитура и стеклянная панель: наклон от курсора (точный указатель, без reduced-motion, не на мобильных)
   const fine = matchMedia('(hover: hover) and (pointer: fine)');
   const tiltOn = () => fine.matches && !reduceMq.matches && innerWidth > 768;
-  const hs = $('#hs3d'), gt = $('#gtilt'), heroEl = $('.hero', root);
+  const hs = $('#hs3d'), heroEl = $('.hero', root);
   let tx = 0, ty = 0, pending = false, tracking = false;
   const applyTilt = () => {
     pending = false;
@@ -301,15 +295,6 @@ export function initLanding() {
     if (!pending) { pending = true; requestAnimationFrame(applyTilt); }
   });
   heroEl.addEventListener('pointerleave', resetTilt);
-  const panel = $('.hero__panel', root);
-  panel.addEventListener('pointermove', (e) => {
-    if (!tiltOn() || e.pointerType !== 'mouse') return;
-    const r = panel.getBoundingClientRect();
-    const nx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1), ny = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
-    gt.classList.add('is-tracking');
-    gt.style.setProperty('--pry', `${(nx * 12).toFixed(2)}deg`); gt.style.setProperty('--prx', `${(-ny * 10).toFixed(2)}deg`);
-  });
-  panel.addEventListener('pointerleave', () => { gt.classList.remove('is-tracking'); gt.style.removeProperty('--pry'); gt.style.removeProperty('--prx'); });
 
   // Dashboard preview: лёгкий наклон за курсором (до ±4°), блик и parallax KPI; touch/reduced-motion — статично
   const win = $('#preview');

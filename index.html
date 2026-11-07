@@ -69,12 +69,8 @@
             <stop offset=".25" stop-color="#4fb84f" stop-opacity=".85"/>
             <stop offset="1" stop-color="#045333" stop-opacity=".85"/>
           </linearGradient>
-          <mask id="flow-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-            <rect id="flow-mask-base" x="0" y="0" width="100" height="100" fill="#fff"/>
-            <g id="flow-mask-holes" fill="#3a3a3a"></g>
-          </mask>
         </defs>
-        <g mask="url(#flow-mask)">
+        <g>
           <path class="flow__ghost" id="flow-ghost"/>
           <path class="flow__band" id="flow-band"/>
           <path class="flow__line" id="flow-line"/>
@@ -117,7 +113,7 @@
           <!-- 3D-гарнитура: подготовленный прозрачный WebP (assets/headset.webp), параллакс от курсора -->
           <div class="hero__headset">
             <div class="hs3d" id="hs3d"><div class="hs3d__sway">
-              <img class="hs3d__img" src="assets/headset.webp" width="900" height="811" alt="" data-i18n-attr="alt:hero.headset" draggable="false" decoding="async" fetchpriority="high">
+              <picture><source type="image/webp" srcset="assets/headset.webp"><img class="hs3d__img" src="assets/headset.png" width="720" height="648" alt="" data-i18n-attr="alt:hero.headset" draggable="false" decoding="async" fetchpriority="high"></picture>
             </div></div>
             <span class="hs3d__shadow" aria-hidden="true"></span>
           </div>
@@ -127,25 +123,15 @@
             <h1 class="hero__title" id="hero-title" data-fisheye>Freedom</h1>
             <p class="hero__subtitle">CQA Insight</p>
             <p class="hero__desc" data-i18n="hero.desc"></p>
-            <button class="btn btn--lg btn--arrow" type="button" id="start-btn" data-nav="login">
+            <button class="btn btn--lg btn--arrow btn--glass" type="button" id="start-btn" data-nav="login">
               <span data-i18n="hero.cta"></span>
               <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
             </button>
           </div>
 
-          <!-- Стеклянная аналитическая панель (иллюстрация, 3D-наклон по hover) -->
+          <!-- Правая 3D AI-плашка: подготовленное изображение (assets/ai-panel.webp, PNG fallback), лёгкий floating -->
           <div class="hero__panel floaty floaty--b" aria-hidden="true">
-            <div class="gtilt" id="gtilt">
-              <div class="gpanel3d">
-                <span class="gpanel3d__back"></span>
-                <div class="gpanel3d__face">
-                  <i class="gloss"></i>
-                  <div class="gbars"><i style="--h:26%"></i><i style="--h:38%"></i><i style="--h:33%"></i><i style="--h:52%"></i><i style="--h:68%"></i><i style="--h:86%"></i></div>
-                  <svg class="gline" viewBox="0 0 200 110" preserveAspectRatio="none"><defs><linearGradient id="gl-g" x1="0" x2="1"><stop offset="0" stop-color="#8fdc8f"/><stop offset="1" stop-color="#2f9a4a"/></linearGradient></defs><path d="M8 90 C 30 78, 40 66, 56 70 S 88 84, 104 62 S 140 38, 176 22" fill="none" stroke="url(#gl-g)" stroke-width="3.2" stroke-linecap="round"/><circle cx="56" cy="70" r="4.5" fill="#fff" stroke="#3fa341" stroke-width="2"/><circle cx="104" cy="62" r="4.5" fill="#fff" stroke="#3fa341" stroke-width="2"/><circle cx="176" cy="22" r="5" fill="#fff" stroke="#3fa341" stroke-width="2.4"/></svg>
-                </div>
-                <div class="aichip"><span>AI</span></div>
-              </div>
-            </div>
+            <picture><source type="image/webp" srcset="assets/ai-panel.webp"><img class="aipanel" src="assets/ai-panel.png" width="640" height="470" alt="" draggable="false" decoding="async" fetchpriority="high"></picture>
           </div>
         </div>
 

@@ -19,6 +19,7 @@ export function initFishEye(el) {
   });
 
   let raf = 0, active = false, px = 0, py = 0, inside = false, measureRaf = 0;
+  let box = { l: 0, r: 0, t: 0, b: 0 };     // page-координаты: на скролле пересчёт не нужен
   const enabled = () => mq.matches && !reduce.matches && !document.hidden;
   const apply = (l) => { l.s.style.transform = l.cur === 1 ? '' : `scale(${l.cur.toFixed(4)})`; };
 
@@ -28,8 +29,10 @@ export function initFishEye(el) {
     letters.forEach((l) => {
       const r = l.s.getBoundingClientRect();
       l.cx = r.left + r.width / 2;
-      l.cy = r.top + r.height / 2;
+      l.cy = r.top + r.height / 2 + scrollY;
     });
+    const er = el.getBoundingClientRect();
+    box = { l: er.left, r: er.right, t: er.top + scrollY, b: er.bottom + scrollY };
     letters.forEach(apply);
   }
   // при прокрутке позиции в viewport меняются — пересчитываем один раз за кадр
@@ -42,7 +45,7 @@ export function initFishEye(el) {
     let moving = false;
     for (const l of letters) {
       if (inside) {
-        const d = Math.hypot(px - l.cx, (py - l.cy) * 0.8);
+        const d = Math.hypot(px - l.cx, (py - (l.cy - scrollY)) * 0.8);
         l.target = d > SIGMA * REACH ? 1 : 1 + (MAX_SCALE - 1) * Math.exp(-(d * d) / (2 * SIGMA * SIGMA));
       } else {
         l.target = 1;
@@ -58,9 +61,8 @@ export function initFishEye(el) {
   function onMove(e) {
     px = e.clientX;
     py = e.clientY;
-    const r = el.getBoundingClientRect();
-    const m = SIGMA * REACH;
-    inside = px > r.left - m && px < r.right + m && py > r.top - m && py < r.bottom + m;
+    const m = SIGMA * REACH, top = box.t - scrollY, bottom = box.b - scrollY;
+    inside = px > box.l - m && px < box.r + m && py > top - m && py < bottom + m;
     kick();
   }
   const onLeave = () => { inside = false; kick(); };
@@ -74,7 +76,6 @@ export function initFishEye(el) {
     document.addEventListener('pointerout', onOut);
     window.addEventListener('blur', onLeave);
     window.addEventListener('resize', measureSoon);
-    window.addEventListener('scroll', measureSoon, { passive: true });
   }
   function detach() {
     if (!active) return;
@@ -84,7 +85,6 @@ export function initFishEye(el) {
     document.removeEventListener('pointerout', onOut);
     window.removeEventListener('blur', onLeave);
     window.removeEventListener('resize', measureSoon);
-    window.removeEventListener('scroll', measureSoon);
     cancelAnimationFrame(raf);
     raf = 0;
     letters.forEach((l) => { l.cur = l.target = 1; apply(l); });

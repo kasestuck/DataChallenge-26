@@ -1,7 +1,8 @@
 // Living Audio Wave — Canvas 2D. Чисто декоративная: без аудио и микрофона.
 const BAR_GAP = 6;          // CSS px между барами
 const BAR_W = 1.6;          // толщина бара
-const MAX_DPR = 2;
+const MAX_DPR = 1.5;
+const FRAME_MS = 12;         // ~30 FPS: для тонкой волны 60 не нужно
 const HOVER_SIGMA = 130;    // радиус влияния курсора, px
 const HOVER_GAIN = 1.1;     // +110% амплитуды в центре влияния
 const COLOR = '79, 174, 62';
@@ -17,9 +18,10 @@ export function createWave(canvas, { interactive = true, amp: baseAmp = 1, seed 
   const ctx = canvas.getContext('2d');
   const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
   let w = 0, h = 0, bars = [];
-  let raf = 0, running = false, wantRun = false, last = 0, t = seed * 10;
+  let raf = 0, timer = 0, running = false, wantRun = false, last = 0, t = seed * 10;
   let calm = 1, calmTarget = 1;                  // множитель амплитуды (переход на Login)
   let px = 0, infl = 0, inflTarget = 0;
+  let boxLeft = 0, boxPageTop = 0, boxH = 0;     // кэш геометрии canvas (в кадре layout не читаем)
   let hasPointer = false, pointerX = 0, pointerY = 0;
 
   function resize() {
@@ -27,6 +29,7 @@ export function createWave(canvas, { interactive = true, amp: baseAmp = 1, seed 
     if (!r.width || !r.height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
     w = r.width; h = r.height;
+    boxLeft = r.left; boxPageTop = r.top + window.scrollY; boxH = r.height;
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -71,26 +74,27 @@ export function createWave(canvas, { interactive = true, amp: baseAmp = 1, seed 
 
   function frame(now) {
     if (!running) return;
+    if (now - last < FRAME_MS) { raf = requestAnimationFrame(frame); return; }
     const dt = Math.min((now - last) / 1000, 0.05);   // не прыгаем после паузы
     last = now;
     t += dt;
     calm += (calmTarget - calm) * (1 - Math.exp(-dt * 7));
     if (interactive) {
       if (hasPointer) {
-        const r = canvas.getBoundingClientRect();
-        px += (pointerX - r.left - px) * (1 - Math.exp(-dt * 10));
-        inflTarget = Math.abs(pointerY - (r.top + r.height / 2)) < r.height / 2 + 60 ? 1 : 0;
+        const top = boxPageTop - window.scrollY;
+        px += (pointerX - boxLeft - px) * (1 - Math.exp(-dt * 10));
+        inflTarget = Math.abs(pointerY - (top + boxH / 2)) < boxH / 2 + 60 ? 1 : 0;
       } else {
         inflTarget = 0;
       }
       infl += (inflTarget - infl) * (1 - Math.exp(-dt * 6));
     }
     draw();
-    raf = requestAnimationFrame(frame);
+    timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 22);   // ~30 вызовов/с вместо опроса на каждом vsync
   }
 
   function onMove(e) {
-    if (!hasPointer) px = e.clientX - canvas.getBoundingClientRect().left;
+    if (!hasPointer) px = e.clientX - boxLeft;
     hasPointer = true;
     pointerX = e.clientX;
     pointerY = e.clientY;
@@ -105,7 +109,7 @@ export function createWave(canvas, { interactive = true, amp: baseAmp = 1, seed 
     last = performance.now();
     raf = requestAnimationFrame(frame);
   }
-  function pauseLoop() { running = false; cancelAnimationFrame(raf); }
+  function pauseLoop() { running = false; cancelAnimationFrame(raf); clearTimeout(timer); }
   function onVisibility() { if (document.hidden) pauseLoop(); else if (wantRun) startLoop(); }
   function onMotionPref() { pauseLoop(); if (wantRun) startLoop(); draw(); }
 
