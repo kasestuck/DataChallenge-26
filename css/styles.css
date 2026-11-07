@@ -610,9 +610,8 @@ html:not(.js) .arc--a { stroke-dashoffset: 0; }
 .navlink:focus-visible, .menubtn:focus-visible { outline: 3px solid var(--c-green-dark); outline-offset: 2px; }
 .topbar__right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .topbar__nav + .topbar__right { margin-left: 0; }
-.topbar__login { min-height: 40px; padding: 0 20px; border-radius: 999px; font-size: 14px; color: #fff; white-space: nowrap;
-  background: linear-gradient(180deg, #2f9a4a, #0b6b3b); box-shadow: 0 4px 10px rgba(4, 83, 51, .18), inset 0 1px 0 rgba(255, 255, 255, .25); }
-.topbar__login:hover { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(4, 83, 51, .22), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.topbar__login.btn--glass { width: auto; min-width: 0; height: 42px; min-height: 42px; padding: 0 20px; gap: 8px; font-size: 14.5px; white-space: nowrap; }
+.topbar__login.btn--glass .ico { width: 16px; height: 16px; }
 .menubtn { display: none; appearance: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--c-line); background: rgba(255, 255, 255, .8); cursor: pointer; place-items: center; align-content: center; gap: 4px; padding: 0; }
 .menubtn i { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--c-green-dark); transition: transform .25s var(--ease), opacity .2s; }
 .menubtn[aria-expanded="true"] i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
@@ -630,13 +629,14 @@ body[data-view]:not([data-view="welcome"]) .topbar__right { margin-left: auto; }
   .topbar__nav { display: none; }
   .menubtn { display: grid; }
   .topbar__right { margin-left: auto; }
-  .topbar__login { min-height: 44px; }
+  .topbar__login.btn--glass { height: 44px; min-height: 44px; }
 }
 @media (max-width: 560px) {
   .topbar__bar { padding-left: 14px; gap: 8px; }
   .brand span { display: none; }
   .topbar__right { gap: 6px; }
-  .topbar__login { padding: 0 14px; }
+  .topbar__login.btn--glass { padding: 0 14px; }
+  .topbar__login .ico { display: none; }
 }
 @media (min-width: 1001px) { .mobilenav { display: none !important; } }
 
