@@ -1,0 +1,4224 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "CQA Conversation Quality Analytics",
+  "description": "Оценка операторских диалогов по версиям чек-листа, доказательства, batch и апелляции. Баллы и стоимость передаются десятичными строками; null не означает нулевую оценку.",
+  "version": "0.4.0"
+ },
+ "paths": {
+  "/api/health": {
+   "get": {
+    "tags": [
+     "Service"
+    ],
+    "summary": "Проверить API и БД",
+    "operationId": "health_api_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/dataset/load": {
+   "post": {
+    "tags": [
+     "Conversations"
+    ],
+    "summary": "Загрузить набор организаторов",
+    "description": "GET к DATASET_API_URL через сервер; идемпотентный upsert.",
+    "operationId": "load_data_api_dataset_load_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DatasetLoadRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DatasetLoadResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/conversations/upload": {
+   "post": {
+    "tags": [
+     "Conversations"
+    ],
+    "summary": "Загрузить одиночный диалог",
+    "description": "JSON с transcript (массив или role: text) либо text/plain. Для text/plain метаданные передаются в query; время неизвестных реплик сохраняется пустой строкой. Существующий conversation_id обновляется идемпотентно.",
+    "operationId": "upload_api_conversations_upload_post",
+    "parameters": [
+     {
+      "name": "conversation_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Conversation Id"
+      }
+     },
+     {
+      "name": "language",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "RU",
+        "KZ",
+        "EN"
+       ],
+       "type": "string",
+       "default": "RU",
+       "title": "Language"
+      }
+     },
+     {
+      "name": "channel",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "agent chat",
+        "voice call"
+       ],
+       "type": "string",
+       "default": "agent chat",
+       "title": "Channel"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/UploadRequest"
+         },
+         {
+          "type": "string"
+         }
+        ],
+        "title": "Body"
+       }
+      },
+      "text/plain": {
+       "schema": {
+        "type": "string"
+       },
+       "example": "client: Какие тарифы?\noperator: Здравствуйте, меня зовут Анна."
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UploadResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/conversations": {
+   "get": {
+    "tags": [
+     "Conversations"
+    ],
+    "summary": "Список диалогов",
+    "description": "q ищет по ID и тексту реплик без учёта регистра; status относится к последней оценке.",
+    "operationId": "conversations_api_conversations_get",
+    "parameters": [
+     {
+      "name": "language",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "RU",
+          "KZ",
+          "EN"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Language"
+      }
+     },
+     {
+      "name": "channel",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "agent chat",
+          "voice call"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Channel"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "pending",
+          "running",
+          "completed",
+          "needs_review",
+          "failed"
+         ],
+         "type": "string"
+        },
+        {
+         "const": "not_evaluated",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ConversationListItem"
+         },
+         "title": "Response Conversations Api Conversations Get"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/conversations/{conversation_id}": {
+   "get": {
+    "tags": [
+     "Conversations"
+    ],
+    "summary": "Транскрипт и последний результат",
+    "operationId": "conversation_api_conversations__conversation_id__get",
+    "parameters": [
+     {
+      "name": "conversation_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Conversation Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConversationResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/conversations/{conversation_id}/evaluations": {
+   "get": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "История оценок диалога по версиям",
+    "operationId": "history_api_conversations__conversation_id__evaluations_get",
+    "parameters": [
+     {
+      "name": "conversation_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Conversation Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/EvaluationResponse"
+         },
+         "title": "Response History Api Conversations  Conversation Id  Evaluations Get"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/checklists": {
+   "get": {
+    "tags": [
+     "Checklists"
+    ],
+    "summary": "Все неизменяемые версии",
+    "operationId": "checklists_api_checklists_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ChecklistResponse"
+         },
+         "type": "array",
+         "title": "Response Checklists Api Checklists Get"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Checklists"
+    ],
+    "summary": "Сохранить и активировать новую версию",
+    "description": "Возвращает diff с предыдущей активной версией: изменённые и добавленные критерии для модели; изменение веса требует только пересчёта. Существующие версии не изменяются.",
+    "operationId": "save_checklist_api_checklists_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChecklistRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChecklistResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/checklists/active": {
+   "get": {
+    "tags": [
+     "Checklists"
+    ],
+    "summary": "Активная версия",
+    "operationId": "active_checklist_api_checklists_active_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChecklistResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/checklists/{version_id}/activate": {
+   "post": {
+    "tags": [
+     "Checklists"
+    ],
+    "summary": "Выбрать активную версию",
+    "operationId": "activate_api_checklists__version_id__activate_post",
+    "parameters": [
+     {
+      "name": "version_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Version Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChecklistResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/evaluations": {
+   "post": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "Оценить диалог реальной моделью",
+    "description": "Синхронное ожидание оценки; event loop не блокируется. При ошибке модели возвращает error и X-Evaluation-ID для чтения сохранённого отказа. needs_review сохраняет только проверенные ответы, total=null.",
+    "operationId": "evaluate_api_evaluations_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvaluationRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EvaluationResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/evaluate": {
+   "post": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "Совместимый реальный alias /api/evaluations",
+    "operationId": "evaluate_alias_api_evaluate_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvaluationRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EvaluationResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    },
+    "deprecated": true
+   }
+  },
+  "/api/evaluations/batch": {
+   "post": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "Запустить пакетную оценку",
+    "description": "Возвращает job_id сразу. Пары диалог/версия с готовой оценкой пропускаются, если force=false. criterion_ids включает только выбранные критерии в промпт; прочие ответы переносятся из предыдущей валидной версии.",
+    "operationId": "batch_api_evaluations_batch_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BatchRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}": {
+   "get": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "Прогресс batch",
+    "description": "done включает успешные, пропущенные и ошибочные элементы. errors содержит отдельные ошибки диалогов.",
+    "operationId": "job_api_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/evaluations/{evaluation_id}": {
+   "get": {
+    "tags": [
+     "Evaluations"
+    ],
+    "summary": "Исходная оценка, решения и финальный результат",
+    "operationId": "evaluation_api_evaluations__evaluation_id__get",
+    "parameters": [
+     {
+      "name": "evaluation_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Evaluation Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EvaluationResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/stats/cost": {
+   "get": {
+    "tags": [
+     "Service"
+    ],
+    "summary": "Токены и стоимость",
+    "description": "Включает все физические вызовы, повторы и апелляции. При незаданных ценах стоимость null.",
+    "operationId": "cost_api_stats_cost_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CostResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/appeals": {
+   "post": {
+    "tags": [
+     "Appeals"
+    ],
+    "summary": "Создать апелляцию по критерию",
+    "operationId": "create_appeal_api_appeals_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AppealRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AppealResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Appeals"
+    ],
+    "summary": "Список апелляций",
+    "operationId": "appeal_list_api_appeals_get",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "open",
+          "reviewed"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AppealResponse"
+         },
+         "title": "Response Appeal List Api Appeals Get"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/appeals/{appeal_id}": {
+   "get": {
+    "tags": [
+     "Appeals"
+    ],
+    "summary": "Спорный критерий и фрагмент диалога",
+    "operationId": "appeal_api_appeals__appeal_id__get",
+    "parameters": [
+     {
+      "name": "appeal_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Appeal Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AppealResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/appeals/{appeal_id}/ai-suggest": {
+   "post": {
+    "tags": [
+     "Appeals"
+    ],
+    "summary": "Получить AI-подсказку",
+    "description": "Подсказка валидируется и не изменяет оценку. Решение фиксируется только отдельным вызовом /decision.",
+    "operationId": "suggest_api_appeals__appeal_id__ai_suggest_post",
+    "parameters": [
+     {
+      "name": "appeal_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Appeal Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SuggestRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SuggestionResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/appeals/{appeal_id}/decision": {
+   "post": {
+    "tags": [
+     "Appeals"
+    ],
+    "summary": "Зафиксировать решение и пересчитать итог",
+    "description": "Проверяющий обязан указать причину. Повторное решение запрещено; original сохраняется без изменений.",
+    "operationId": "decide_api_appeals__appeal_id__decision_post",
+    "parameters": [
+     {
+      "name": "appeal_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Appeal Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecisionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DecisionResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Запись не найдена",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Конфликт состояния",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Вход превышает лимит; данные не обрезались",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Некорректный запрос",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Лимит модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "Внутренняя ошибка",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "Ошибка внешнего API/модели",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Сервис не настроен",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     },
+     "504": {
+      "description": "Таймаут внешнего API",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AppealRequest": {
+    "properties": {
+     "evaluation_id": {
+      "type": "string",
+      "title": "Evaluation Id"
+     },
+     "criterion_id": {
+      "type": "string",
+      "title": "Criterion Id",
+      "examples": [
+       "05"
+      ]
+     },
+     "comment": {
+      "type": "string",
+      "maxLength": 20000,
+      "minLength": 1,
+      "title": "Comment",
+      "examples": [
+       "Прошу проверить реакцию оператора в m3."
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "evaluation_id",
+     "criterion_id",
+     "comment"
+    ],
+    "title": "AppealRequest"
+   },
+   "AppealResponse": {
+    "properties": {
+     "appeal_id": {
+      "type": "string",
+      "title": "Appeal Id"
+     },
+     "evaluation_id": {
+      "type": "string",
+      "title": "Evaluation Id"
+     },
+     "criterion_id": {
+      "type": "string",
+      "title": "Criterion Id"
+     },
+     "comment": {
+      "type": "string",
+      "title": "Comment"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "open",
+       "reviewed"
+      ],
+      "title": "Status"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "appeal_id",
+     "evaluation_id",
+     "criterion_id",
+     "comment",
+     "status"
+    ],
+    "title": "AppealResponse"
+   },
+   "BatchRequest": {
+    "properties": {
+     "conversation_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conversation Ids",
+      "examples": [
+       [
+        "p1-ru-001",
+        "p1-kz-001"
+       ]
+      ]
+     },
+     "all": {
+      "type": "boolean",
+      "title": "All",
+      "description": "Все диалоги, находящиеся в БД на момент запуска.",
+      "default": false
+     },
+     "checklist_version_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Checklist Version Id"
+     },
+     "output_language": {
+      "type": "string",
+      "enum": [
+       "ru",
+       "kk",
+       "en"
+      ],
+      "title": "Output Language",
+      "default": "ru"
+     },
+     "force": {
+      "type": "boolean",
+      "title": "Force",
+      "description": "Повторно оценить уже завершённые пары диалог/версия.",
+      "default": false
+     },
+     "criterion_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criterion Ids",
+      "description": "Подмножество для переоценки. [] — пересчёт из прежних ответов, если изменились только веса.",
+      "examples": [
+       [
+        "05"
+       ]
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "BatchRequest"
+   },
+   "ChecklistRequest": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name",
+      "examples": [
+       "Freedom Broker: чек-лист качества чатов"
+      ]
+     },
+     "checklist_id": {
+      "type": "string",
+      "title": "Checklist Id",
+      "default": "freedom-broker"
+     },
+     "sections": {
+      "items": {
+       "$ref": "#/components/schemas/SectionConfig"
+      },
+      "type": "array",
+      "title": "Sections"
+     },
+     "criteria": {
+      "items": {
+       "$ref": "#/components/schemas/CriterionConfig"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Criteria"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "sections",
+     "criteria"
+    ],
+    "title": "ChecklistRequest"
+   },
+   "ChecklistResponse": {
+    "properties": {
+     "checklist_version_id": {
+      "type": "string",
+      "title": "Checklist Version Id"
+     },
+     "checklist_id": {
+      "type": "string",
+      "title": "Checklist Id"
+     },
+     "version": {
+      "type": "integer",
+      "title": "Version"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "sections": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Sections"
+     },
+     "criteria": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Criteria"
+     },
+     "weight_sum": {
+      "type": "string",
+      "title": "Weight Sum",
+      "description": "Сумма весов активных scored-критериев до нормирования к 100."
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "change_summary": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Change Summary"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "checklist_version_id",
+     "checklist_id",
+     "version",
+     "name",
+     "sections",
+     "criteria",
+     "weight_sum",
+     "created_at"
+    ],
+    "title": "ChecklistResponse"
+   },
+   "ConversationListItem": {
+    "properties": {
+     "conversation_id": {
+      "type": "string",
+      "title": "Conversation Id"
+     },
+     "language": {
+      "type": "string",
+      "enum": [
+       "RU",
+       "KZ",
+       "EN"
+      ],
+      "title": "Language"
+     },
+     "channel": {
+      "type": "string",
+      "enum": [
+       "agent chat",
+       "voice call"
+      ],
+      "title": "Channel"
+     },
+     "total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total"
+     },
+     "gross_violation": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gross Violation"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "pending",
+         "running",
+         "completed",
+         "needs_review",
+         "failed"
+        ]
+       },
+       {
+        "type": "string",
+        "const": "not_evaluated"
+       }
+      ],
+      "title": "Status"
+     },
+     "evaluation_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evaluation Id"
+     },
+     "has_appeal": {
+      "type": "boolean",
+      "title": "Has Appeal",
+      "default": false
+     },
+     "has_open_appeal": {
+      "type": "boolean",
+      "title": "Has Open Appeal",
+      "default": false
+     },
+     "evaluation_stale": {
+      "type": "boolean",
+      "title": "Evaluation Stale",
+      "default": false
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "conversation_id",
+     "language",
+     "channel",
+     "status"
+    ],
+    "title": "ConversationListItem"
+   },
+   "ConversationResponse": {
+    "properties": {
+     "conversation_id": {
+      "type": "string",
+      "title": "Conversation Id"
+     },
+     "channel": {
+      "type": "string",
+      "enum": [
+       "agent chat",
+       "voice call"
+      ],
+      "title": "Channel"
+     },
+     "language": {
+      "type": "string",
+      "enum": [
+       "RU",
+       "KZ",
+       "EN"
+      ],
+      "title": "Language"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     },
+     "transcript": {
+      "items": {
+       "$ref": "#/components/schemas/TranscriptMessage"
+      },
+      "type": "array",
+      "title": "Transcript"
+     },
+     "latest_result": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/EvaluationResponse"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "conversation_id",
+     "channel",
+     "language",
+     "transcript"
+    ],
+    "title": "ConversationResponse"
+   },
+   "CostResponse": {
+    "properties": {
+     "evaluations": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Evaluations"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "title": "CostResponse",
+    "description": "Totals include failed attempts and appeal suggestions; unknown costs remain null."
+   },
+   "CriterionConfig": {
+    "properties": {
+     "criterion_id": {
+      "type": "string",
+      "title": "Criterion Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description",
+      "default": ""
+     },
+     "section": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Section"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "yes_no",
+       "scale",
+       "flag"
+      ],
+      "title": "Type"
+     },
+     "weight": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Weight"
+     },
+     "allow_na": {
+      "type": "boolean",
+      "title": "Allow Na",
+      "default": false
+     },
+     "na_condition": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Na Condition"
+     },
+     "yes_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Yes Text"
+     },
+     "no_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "No Text"
+     },
+     "scale": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Scale"
+     },
+     "scored": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scored",
+      "description": "По умолчанию true, кроме flag (false)."
+     },
+     "order": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order"
+     },
+     "active": {
+      "type": "boolean",
+      "title": "Active",
+      "default": true
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "criterion_id",
+     "name",
+     "type",
+     "weight"
+    ],
+    "title": "CriterionConfig"
+   },
+   "CriterionResult": {
+    "properties": {
+     "criterion_id": {
+      "type": "string",
+      "title": "Criterion Id"
+     },
+     "answer": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Answer"
+     },
+     "reasoning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reasoning"
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/Evidence"
+      },
+      "type": "array",
+      "title": "Evidence"
+     },
+     "checked_range": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Checked Range"
+     },
+     "effective_weight": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Effective Weight"
+     },
+     "points": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Points"
+     },
+     "has_open_appeal": {
+      "type": "boolean",
+      "title": "Has Open Appeal",
+      "default": false
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "criterion_id"
+    ],
+    "title": "CriterionResult"
+   },
+   "DatasetLoadRequest": {
+    "properties": {
+     "group_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Group Id",
+      "examples": [
+       "DEV"
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "DatasetLoadRequest"
+   },
+   "DatasetLoadResponse": {
+    "properties": {
+     "dataset_group_id": {
+      "type": "string",
+      "title": "Dataset Group Id"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "inserted": {
+      "type": "integer",
+      "title": "Inserted"
+     },
+     "updated": {
+      "type": "integer",
+      "title": "Updated"
+     },
+     "unchanged": {
+      "type": "integer",
+      "title": "Unchanged"
+     },
+     "warnings": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Warnings"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "dataset_group_id",
+     "total",
+     "inserted",
+     "updated",
+     "unchanged"
+    ],
+    "title": "DatasetLoadResponse"
+   },
+   "DecisionRequest": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "enum": [
+       "confirm",
+       "change"
+      ],
+      "title": "Decision"
+     },
+     "final_answer": {
+      "type": "string",
+      "title": "Final Answer"
+     },
+     "reason": {
+      "type": "string",
+      "maxLength": 20000,
+      "minLength": 1,
+      "title": "Reason",
+      "examples": [
+       "Действие подтверждается репликой m3."
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "decision",
+     "final_answer",
+     "reason"
+    ],
+    "title": "DecisionRequest"
+   },
+   "DecisionResponse": {
+    "properties": {
+     "appeal_id": {
+      "type": "string",
+      "title": "Appeal Id"
+     },
+     "evaluation_id": {
+      "type": "string",
+      "title": "Evaluation Id"
+     },
+     "decision": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Decision"
+     },
+     "original_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Original Total"
+     },
+     "before_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Before Total"
+     },
+     "after_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "After Total"
+     },
+     "final_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Final Total"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "appeal_id",
+     "evaluation_id",
+     "decision"
+    ],
+    "title": "DecisionResponse"
+   },
+   "ErrorDetail": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code",
+      "examples": [
+       "CONVERSATION_NOT_FOUND"
+      ]
+     },
+     "message": {
+      "type": "string",
+      "title": "Message",
+      "examples": [
+       "Диалог не найден."
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "message"
+    ],
+    "title": "ErrorDetail"
+   },
+   "ErrorResponse": {
+    "properties": {
+     "error": {
+      "$ref": "#/components/schemas/ErrorDetail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "error"
+    ],
+    "title": "ErrorResponse"
+   },
+   "EvaluationRequest": {
+    "properties": {
+     "conversation_id": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conversation Id",
+      "examples": [
+       "p1-ru-001"
+      ]
+     },
+     "checklist_version_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Checklist Version Id",
+      "description": "Если пропущен, используется активная версия."
+     },
+     "output_language": {
+      "type": "string",
+      "enum": [
+       "ru",
+       "kk",
+       "en"
+      ],
+      "title": "Output Language",
+      "default": "ru"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "conversation_id"
+    ],
+    "title": "EvaluationRequest"
+   },
+   "EvaluationResponse": {
+    "properties": {
+     "evaluation_id": {
+      "type": "string",
+      "title": "Evaluation Id"
+     },
+     "conversation_id": {
+      "type": "string",
+      "title": "Conversation Id"
+     },
+     "checklist_version_id": {
+      "type": "string",
+      "title": "Checklist Version Id"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "running",
+       "completed",
+       "needs_review",
+       "failed"
+      ],
+      "title": "Status"
+     },
+     "output_language": {
+      "type": "string",
+      "enum": [
+       "ru",
+       "kk",
+       "en"
+      ],
+      "title": "Output Language",
+      "default": "ru"
+     },
+     "original": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Original",
+      "description": "Неизменяемый результат исходной оценки."
+     },
+     "final": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Final",
+      "description": "Результат с учётом решений проверяющего."
+     },
+     "decisions": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Decisions"
+     },
+     "criteria": {
+      "items": {
+       "$ref": "#/components/schemas/CriterionResult"
+      },
+      "type": "array",
+      "title": "Criteria"
+     },
+     "sections": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Sections"
+     },
+     "total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total",
+      "examples": [
+       "92.31"
+      ]
+     },
+     "original_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Original Total"
+     },
+     "final_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Final Total"
+     },
+     "gross_violation": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gross Violation"
+     },
+     "usage": {
+      "$ref": "#/components/schemas/UsageResponse"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "evaluation_id",
+     "conversation_id",
+     "checklist_version_id",
+     "status"
+    ],
+    "title": "EvaluationResponse"
+   },
+   "Evidence": {
+    "properties": {
+     "message_id": {
+      "type": "string",
+      "title": "Message Id"
+     },
+     "quote": {
+      "type": "string",
+      "title": "Quote"
+     },
+     "speaker": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "client",
+         "operator",
+         "bot",
+         "system"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speaker"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "message_id",
+     "quote"
+    ],
+    "title": "Evidence"
+   },
+   "HealthResponse": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "const": "ok",
+      "title": "Status",
+      "default": "ok"
+     },
+     "database": {
+      "type": "string",
+      "const": "ok",
+      "title": "Database",
+      "default": "ok"
+     }
+    },
+    "type": "object",
+    "title": "HealthResponse"
+   },
+   "JobResponse": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "running",
+       "completed",
+       "failed",
+       "interrupted"
+      ],
+      "title": "Status"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "done": {
+      "type": "integer",
+      "title": "Done"
+     },
+     "errors": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Errors"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "job_id",
+     "status",
+     "total",
+     "done"
+    ],
+    "title": "JobResponse"
+   },
+   "SectionConfig": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "name"
+    ],
+    "title": "SectionConfig"
+   },
+   "SuggestRequest": {
+    "properties": {
+     "output_language": {
+      "type": "string",
+      "enum": [
+       "ru",
+       "kk",
+       "en"
+      ],
+      "title": "Output Language",
+      "default": "ru"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "SuggestRequest"
+   },
+   "SuggestionContent": {
+    "properties": {
+     "criterion_id": {
+      "type": "string",
+      "title": "Criterion Id"
+     },
+     "original_answer": {
+      "type": "string",
+      "title": "Original Answer"
+     },
+     "decision": {
+      "type": "string",
+      "enum": [
+       "confirm",
+       "change"
+      ],
+      "title": "Decision"
+     },
+     "final_answer": {
+      "type": "string",
+      "title": "Final Answer"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/Evidence"
+      },
+      "type": "array",
+      "title": "Evidence"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "criterion_id",
+     "original_answer",
+     "decision",
+     "final_answer",
+     "reason",
+     "evidence"
+    ],
+    "title": "SuggestionContent"
+   },
+   "SuggestionResponse": {
+    "properties": {
+     "appeal_id": {
+      "type": "string",
+      "title": "Appeal Id"
+     },
+     "is_suggestion": {
+      "type": "boolean",
+      "const": true,
+      "title": "Is Suggestion",
+      "default": true
+     },
+     "suggestion": {
+      "$ref": "#/components/schemas/SuggestionContent"
+     },
+     "call_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Call Id"
+     },
+     "usage": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usage"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "appeal_id",
+     "suggestion"
+    ],
+    "title": "SuggestionResponse"
+   },
+   "TranscriptInput": {
+    "properties": {
+     "timestamp": {
+      "type": "string",
+      "title": "Timestamp",
+      "description": "Исходная метка без преобразования; пустая строка, если время неизвестно.",
+      "default": "",
+      "examples": [
+       "00:02"
+      ]
+     },
+     "speaker": {
+      "type": "string",
+      "enum": [
+       "client",
+       "operator",
+       "bot",
+       "system"
+      ],
+      "title": "Speaker"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text",
+      "examples": [
+       "Здравствуйте, меня зовут Анна."
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "speaker",
+     "text"
+    ],
+    "title": "TranscriptInput"
+   },
+   "TranscriptMessage": {
+    "properties": {
+     "message_id": {
+      "type": "string",
+      "title": "Message Id",
+      "examples": [
+       "m1"
+      ]
+     },
+     "timestamp": {
+      "type": "string",
+      "title": "Timestamp"
+     },
+     "speaker": {
+      "type": "string",
+      "enum": [
+       "client",
+       "operator",
+       "bot",
+       "system"
+      ],
+      "title": "Speaker"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "offset_sec": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Offset Sec"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url",
+      "description": "Ссылка для проигрывателя звонка, повторяется из карточки диалога."
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "message_id",
+     "timestamp",
+     "speaker",
+     "text"
+    ],
+    "title": "TranscriptMessage"
+   },
+   "UploadRequest": {
+    "properties": {
+     "conversation_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conversation Id",
+      "examples": [
+       "uploaded-001"
+      ]
+     },
+     "channel": {
+      "type": "string",
+      "enum": [
+       "agent chat",
+       "voice call"
+      ],
+      "title": "Channel",
+      "default": "agent chat"
+     },
+     "language": {
+      "type": "string",
+      "enum": [
+       "RU",
+       "KZ",
+       "EN"
+      ],
+      "title": "Language",
+      "default": "RU"
+     },
+     "transcript": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/TranscriptInput"
+        },
+        "type": "array"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Transcript",
+      "description": "Массив реплик либо текст role: text, одна реплика на строку.",
+      "examples": [
+       "client: Какие тарифы?\noperator: Здравствуйте, меня зовут Анна."
+      ]
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "transcript"
+    ],
+    "title": "UploadRequest"
+   },
+   "UploadResponse": {
+    "properties": {
+     "conversation_id": {
+      "type": "string",
+      "title": "Conversation Id"
+     },
+     "import_result": {
+      "$ref": "#/components/schemas/DatasetLoadResponse"
+     },
+     "conversation": {
+      "$ref": "#/components/schemas/ConversationResponse"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "conversation_id",
+     "import_result",
+     "conversation"
+    ],
+    "title": "UploadResponse"
+   },
+   "UsageResponse": {
+    "properties": {
+     "calls": {
+      "type": "integer",
+      "title": "Calls",
+      "default": 0
+     },
+     "prompt_tokens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prompt Tokens"
+     },
+     "completion_tokens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Tokens"
+     },
+     "total_tokens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total Tokens"
+     },
+     "cost": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cost"
+     },
+     "price_status": {
+      "type": "string",
+      "title": "Price Status",
+      "description": "price_not_set означает «цена не задана».",
+      "default": "price_not_set"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "title": "UsageResponse"
+   }
+  }
+ }
+}
