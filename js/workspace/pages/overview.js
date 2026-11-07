@@ -115,10 +115,8 @@ export function mountOverview(root, ctx) {
         ${kpiCard({ key: 'appeals', ico: 'quote', value: num(k.pending_appeals_count), href: `${link('appeals')}?status=pending`, tone: k.pending_appeals_count > 0 ? 'wk-kpi--warn' : '' })}
       </div>
       <div class="ov__grid">
-        ${trendPanel()}${distPanel()}
-        ${listPanel('conv', t('ws.ov.recent.conversations'), 'conversations', 'conv')}
-        ${langPanel()}
-        ${listPanel('appeals', t('ws.ov.recent.appeals'), 'appeals', 'appeals')}
+        <div class="ov__col">${trendPanel()}${listPanel('conv', t('ws.ov.recent.conversations'), 'conversations', 'conv')}</div>
+        <div class="ov__col">${distPanel()}${langPanel()}${listPanel('appeals', t('ws.ov.recent.appeals'), 'appeals', 'appeals')}</div>
       </div>`;
     fillLists();
   }
