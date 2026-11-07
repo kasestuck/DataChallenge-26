@@ -1,6 +1,7 @@
 """SQLite schema and connection lifecycle. No model or network dependency."""
 
 import sqlite3
+import re
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 CREATE TABLE IF NOT EXISTS conversations (
     conversation_id TEXT PRIMARY KEY,
     dataset_group_id TEXT,
-    channel TEXT NOT NULL CHECK(channel IN ('agent chat','voice call')),
+    channel TEXT NOT NULL CHECK(length(trim(channel)) BETWEEN 1 AND 80),
     language TEXT NOT NULL CHECK(language IN ('RU','KZ','EN')),
     audio_url TEXT,
     raw_json TEXT NOT NULL,
@@ -210,6 +211,7 @@ def init_db(path: str | Path | None = None) -> None:
 
 def migrate_schema(conn: sqlite3.Connection) -> None:
     """Add audit columns to existing databases without replacing records."""
+    _migrate_channel_constraint(conn)
     additions = {
         "evaluations": {
             "prompt_hash": "TEXT",
@@ -238,3 +240,33 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
             for column, definition in columns.items():
                 if column not in present:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def _migrate_channel_constraint(conn: sqlite3.Connection) -> None:
+    """SQLite cannot drop a CHECK in place; rebuild atomically with all rows intact."""
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='conversations'").fetchone()
+    if not row or not re.search(r"CHECK\s*\(\s*channel\s+IN\s*\(", row[0], re.IGNORECASE):
+        return
+    if conn.in_transaction:
+        raise RuntimeError("Channel schema migration requires a connection without an open transaction.")
+    schema = SCHEMA.split("CREATE TABLE IF NOT EXISTS conversations (", 1)[1].split("\n);", 1)[0]
+    expected = {"conversation_id", "dataset_group_id", "channel", "language", "audio_url", "raw_json", "content_hash", "revision", "created_at", "updated_at"}
+    columns = [r[1] for r in conn.execute("PRAGMA table_info(conversations)")]
+    if set(columns) != expected:
+        raise RuntimeError("Unknown conversations schema; automatic channel migration was not applied.")
+    dependent_sql = [r[0] for r in conn.execute("SELECT sql FROM sqlite_master WHERE tbl_name='conversations' AND type IN ('index','trigger') AND sql IS NOT NULL")]
+    foreign_keys = conn.execute("PRAGMA foreign_keys").fetchone()[0]
+    conn.execute("PRAGMA foreign_keys=OFF")
+    try:
+        with write_transaction(conn):
+            conn.execute("CREATE TABLE conversations_omnichannel (" + schema + "\n)")
+            names = ",".join(columns)  # Validated against a fixed internal column set.
+            conn.execute(f"INSERT INTO conversations_omnichannel ({names}) SELECT {names} FROM conversations")
+            conn.execute("DROP TABLE conversations")
+            conn.execute("ALTER TABLE conversations_omnichannel RENAME TO conversations")
+            for sql in dependent_sql:
+                conn.execute(sql)
+            if conn.execute("PRAGMA foreign_key_check").fetchall():
+                raise RuntimeError("Channel schema migration failed the foreign key check.")
+    finally:
+        conn.execute("PRAGMA foreign_keys=" + str(int(foreign_keys)))

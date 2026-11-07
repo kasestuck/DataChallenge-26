@@ -13,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from backend.checklist import diff_checklists, get_checklist
+from backend.channels import channel_context
 from backend.config import load_llm_options
 from backend.dataset import get_conversation
 from backend.db import write_transaction
@@ -61,6 +62,7 @@ def build_prompts(conversation: dict, checklist: dict, output_language: str = "r
         "conversation_id": conversation["conversation_id"],
         "channel": conversation["channel"],
         "language": conversation["language"],
+        "channel_context": channel_context(conversation["channel"]),
     }
     lines = [
         f"[{message['message_id']}] {_transcript_field(message['timestamp'])} "
@@ -329,6 +331,8 @@ def evaluate_conversation(conn: sqlite3.Connection, conversation_id: str, *,
         conversation = get_conversation(conn, conversation_id)
         if conversation is None:
             raise EvaluationInputError("CONVERSATION_NOT_FOUND", "Диалог не найден.")
+        if not any(message["speaker"] == "operator" for message in conversation["transcript"]):
+            raise EvaluationInputError("NO_OPERATOR_MESSAGES", "В транскрипте нет реплик оператора; данных для оценки его работы недостаточно. Итог не вычислялся.")
         checklist = get_checklist(conn, checklist_version_id)
         prompt_checklist, reused, reevaluation = _partial_plan(conn, conversation, checklist, criterion_ids)
         model_needed = bool([c for c in prompt_checklist["criteria"] if c.get("active", True)])

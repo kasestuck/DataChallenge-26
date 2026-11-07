@@ -112,6 +112,44 @@ def test_json_text_upload_normalization_and_idempotence(api):
     assert malformed.json()["error"]["code"] == "INVALID_TRANSCRIPT_TEXT"
 
 
+@pytest.mark.parametrize("channel", ["email", "whatsapp", "custom support inbox"])
+def test_arbitrary_channel_upload_evaluation_and_timestamp_preservation(api, channel):
+    client, _, calls = api
+    response = client.post("/api/conversations/upload", json={
+        "conversation_id": "synthetic-omnichannel", "language": "RU", "channel": channel,
+        "transcript": [{"speaker": "client", "text": "Где найти справку приложения?"},
+                       {"timestamp": "Sat, 07 Nov 2026 14:00:00 +0500", "speaker": "operator", "text": "Здравствуйте, меня зовут Анна."},
+                       {"timestamp": None, "speaker": "system", "text": "Тестовый диалог завершён."}],
+    })
+    assert response.status_code == 201, response.text
+    messages = response.json()["conversation"]["transcript"]
+    assert [m["timestamp"] for m in messages] == ["", "Sat, 07 Nov 2026 14:00:00 +0500", ""]
+    assert [m["message_id"] for m in messages] == ["m1", "m2", "m3"]
+    evaluated = client.post("/api/evaluations", json={"conversation_id": "synthetic-omnichannel"})
+    assert evaluated.status_code == 201, evaluated.text
+    assert evaluated.json()["status"] == "completed"
+    metadata = json.loads(calls[0].splitlines()[1])
+    assert metadata["channel"] == channel
+    assert metadata["channel_context"]["evaluation_source"] == "transcript_only"
+    listed = client.get("/api/conversations", params={"channel": channel}).json()
+    assert any(c["conversation_id"] == "synthetic-omnichannel" for c in listed)
+
+
+def test_no_operator_returns_explicit_error_without_llm_or_zero_score(api):
+    client, path, calls = api
+    uploaded = client.post("/api/conversations/upload", json={
+        "conversation_id": "synthetic-no-operator", "channel": "email",
+        "transcript": [{"speaker": "client", "text": "Здравствуйте."}],
+    })
+    assert uploaded.status_code == 201
+    response = client.post("/api/evaluations", json={"conversation_id": "synthetic-no-operator"})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "NO_OPERATOR_MESSAGES"
+    assert "total" not in response.json() and not calls
+    with closing(connect_db(path)) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM evaluations").fetchone()[0] == 0
+
+
 def test_dataset_not_configured_and_model_error_is_not_success(api, monkeypatch):
     client, path, _ = api
     response = client.post("/api/dataset/load", json={})

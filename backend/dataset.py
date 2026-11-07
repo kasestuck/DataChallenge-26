@@ -11,6 +11,7 @@ from urllib.parse import unquote_plus
 import httpx
 
 from backend.config import DataSettings
+from backend.channels import timestamp_offsets
 from backend.db import write_transaction
 
 
@@ -26,21 +27,13 @@ def _required_string(value: Any, field: str) -> str:
     return value
 
 
-def _iso_time(value: str) -> datetime | None:
-    try:
-        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return result if result.tzinfo is not None and result.utcoffset() is not None else None
-    except (ValueError, OverflowError):
-        return None
-
-
 def normalize_conversation(record: dict) -> dict:
     if not isinstance(record, dict):
         raise DatasetError("DATASET_INVALID", "Каждая запись должна быть JSON-объектом.")
     cid = _required_string(record.get("conversation_id"), "conversation_id")
-    channel = record.get("channel")
+    channel = _required_string(record.get("channel"), "channel")
     language = record.get("language")
-    if channel not in ("agent chat", "voice call") or language not in ("RU", "KZ", "EN"):
+    if len(channel) > 80 or language not in ("RU", "KZ", "EN"):
         raise DatasetError("DATASET_INVALID", "Недопустимое значение channel или language.")
     transcript = record.get("transcript")
     if not isinstance(transcript, list) or not transcript:
@@ -50,32 +43,26 @@ def normalize_conversation(record: dict) -> dict:
         raise DatasetError("DATASET_INVALID", "audio_url должен быть строкой или null.")
     messages = []
     warnings = []
-    origin = None
     for index, item in enumerate(transcript, start=1):
         if not isinstance(item, dict):
             raise DatasetError("DATASET_INVALID", "Реплика должна быть JSON-объектом.")
         timestamp = item.get("timestamp")
+        if timestamp is None:
+            timestamp = ""
         text = item.get("text")
         speaker = item.get("speaker")
         if not isinstance(timestamp, str) or not isinstance(text, str):
             raise DatasetError("DATASET_INVALID", "timestamp и text должны быть строками.")
         if speaker not in ("client", "operator", "bot", "system"):
             raise DatasetError("DATASET_INVALID", "Недопустимая роль speaker.")
-        offset = None
-        if channel == "voice call":
-            current = _iso_time(timestamp)
-            if index == 1:
-                origin = current
-            if current is None:
-                warnings.append({"conversation_id": cid, "message_id": f"m{index}", "code": "INVALID_ISO_TIMESTAMP"})
-            if origin is not None and current is not None:
-                offset = (current - origin).total_seconds()
-            elif index > 1 and origin is None and current is not None:
-                warnings.append({"conversation_id": cid, "message_id": f"m{index}", "code": "INVALID_TIME_ORIGIN"})
         messages.append({
             "message_id": f"m{index}", "position": index, "timestamp": timestamp,
-            "speaker": speaker, "text": text, "offset_sec": offset,
+            "speaker": speaker, "text": text, "offset_sec": None,
         })
+    offsets, time_warnings = timestamp_offsets(channel, [m["timestamp"] for m in messages])
+    for message, offset in zip(messages, offsets):
+        message["offset_sec"] = offset
+    warnings.extend({"conversation_id": cid, **warning} for warning in time_warnings)
     raw_json = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return {
         "conversation_id": cid, "channel": channel, "language": language,

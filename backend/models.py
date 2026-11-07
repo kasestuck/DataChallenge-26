@@ -1,12 +1,12 @@
 """Public REST schemas. Decimal scores and costs are serialized as strings."""
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 Language = Literal["RU", "KZ", "EN"]
 OutputLanguage = Literal["ru", "kk", "en"]
-Channel = Literal["agent chat", "voice call"]
+Channel = Annotated[str, StringConstraints(min_length=1, max_length=80, pattern=r"\S")]
 Status = Literal["pending", "running", "completed", "needs_review", "failed"]
 
 
@@ -46,7 +46,7 @@ class DatasetLoadResponse(PublicModel):
 
 
 class TranscriptInput(RequestModel):
-    timestamp: str = Field(default="", description="Исходная метка без преобразования; пустая строка, если время неизвестно.", examples=["00:02"])
+    timestamp: str | None = Field(default=None, description="Исходная строка без преобразования; отсутствующая/null метка хранится как пустая строка.", examples=["00:02"])
     speaker: Literal["client", "operator", "bot", "system"]
     text: str = Field(examples=["Здравствуйте, меня зовут Анна."])
 
