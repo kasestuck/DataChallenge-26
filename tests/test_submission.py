@@ -299,3 +299,35 @@ def test_error_contract_rejects_fake_zero_and_requires_reason(database):
     payload["results"][0]["score"] = 0
     with pytest.raises(SubmissionError):
         validate_submission(payload, expected_ids=meta["expected_ids"], transcript_lengths=meta["transcript_lengths"])
+
+
+@pytest.mark.parametrize("answer", ["no", "na"])
+def test_no_and_na_without_evidence_or_checked_range_export_as_error(database, answer):
+    def clear(result):
+        row = next(c for c in result["criteria"] if c["criterion_id"] == "02")
+        row.update(evidence=[], checked_range=None)
+    store_evaluation(database, "synthetic-0", overrides={"02": answer}, mutate=clear)
+    payload, _ = build(database)
+    result = payload["results"][0]
+    assert result["status"] == "error" and result["score"] is None
+    assert "Нет и N/A" in result["error"]
+
+
+def test_legacy_no_operator_evaluation_cannot_be_exported_as_zero(database):
+    original = record("synthetic-0")
+    original["transcript"][3]["speaker"] = "bot"
+    import_records(database, "CONTROL_TEST", [original])
+    store_evaluation(database, "synthetic-0")
+    payload, _ = build(database)
+    result = payload["results"][0]
+    assert result["status"] == "error" and result["score"] is None and result["criteria"] == []
+    assert "отсутствуют реплики оператора" in result["error"]
+
+
+@pytest.mark.parametrize("code,value", [("discovery", None), ("critical", False)])
+def test_submission_file_requires_evidence_for_false_and_na(database, code, value):
+    payload, metadata = build(database)
+    row = next(c for c in payload["results"][0]["criteria"] if c["criterion_id"] == code)
+    row.update(value=value, evidence_turns=[])
+    with pytest.raises(SubmissionError, match="evidence_turns"):
+        validate_submission(payload, expected_ids=metadata["expected_ids"], transcript_lengths=metadata["transcript_lengths"])

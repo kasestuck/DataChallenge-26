@@ -97,6 +97,8 @@ def _evidence_turns(row, transcript):
     positions = {m["message_id"]: index for index, m in enumerate(transcript, 1)}
     messages = {m["message_id"]: m for m in transcript}
     _require(len(positions) == len(transcript), "INVALID_TRANSCRIPT", "В транскрипте повторяются message_id.")
+    _require(all(mid == f"m{index}" for mid, index in positions.items()),
+             "INVALID_TRANSCRIPT", "message_id не соответствует исходному порядку реплик.")
     selected = set()
     evidence = row.get("evidence", [])
     _require(isinstance(evidence, list), "INVALID_EVIDENCE", "Доказательства не являются массивом.")
@@ -115,6 +117,8 @@ def _evidence_turns(row, transcript):
         _require(start is not None and end is not None and start <= end,
                  "INVALID_EVIDENCE", "Некорректен диапазон проверки.")
         selected.update(range(start, end + 1))
+    _require(row.get("answer") not in {"no", "na"} or bool(selected),
+             "EVIDENCE_REQUIRED", "Для Нет и N/A отсутствуют места проверки или обоснования в транскрипте.")
     return sorted(selected)
 
 
@@ -143,6 +147,8 @@ def _models_for_evaluation(conn, evaluation, seen=None):
 
 
 def _export_ok(evaluation, conversation, checklist):
+    _require(any(message.get("speaker") == "operator" for message in conversation["transcript"]),
+             "NO_OPERATOR_MESSAGES", "В транскрипте отсутствуют реплики оператора; оценить его работу невозможно.")
     snapshot = evaluation["conversation_snapshot"]
     _require(snapshot.get("conversation_id") == conversation["conversation_id"]
              and snapshot.get("channel") == conversation["channel"]
@@ -220,7 +226,9 @@ def build_submission(conn, *, group_id, split, team_name, checklist_version_id=N
             continue
         try:
             results.append(_export_ok(evaluation, conversation, checklist))
-        except (SubmissionError, ValueError, KeyError, TypeError):
+        except SubmissionError as exc:
+            results.append(_error_record(cid, str(exc)))
+        except (ValueError, KeyError, TypeError):
             # Domain messages are deliberately bounded; no raw provider or source text.
             results.append(_error_record(cid, "Сохранённая оценка не прошла проверку структуры, доказательств или пересчёта."))
     _require(model_names, "MODEL_PROVENANCE_UNKNOWN", "Нельзя установить имя фактически использованной модели из журнала вызовов.")
@@ -289,6 +297,8 @@ def validate_submission(payload, *, expected_ids, transcript_lengths):
                      and all(type(t) is int and 1 <= t <= limit for t in turns)
                      and len(turns) == len(set(turns)),
                      "INVALID_SUBMISSION", "Номер доказательства выходит за пределы исходного транскрипта или повторяется.")
+            _require((value is not False and value is not None) or bool(turns),
+                     "INVALID_SUBMISSION", "Для Нет и N/A evidence_turns не должен быть пустым.")
             if kind == "flag":
                 critical = value
             elif value is not None:
