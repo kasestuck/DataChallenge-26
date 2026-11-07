@@ -1,7 +1,7 @@
 // Conversations: список диалогов (поиск, фильтры, сортировка, пагинация, импорт) и карточка диалога
 // (транскрипт + AI-оценка, evidence navigation по стабильному message_id, аудио только при наличии audio_url).
 import { t, applyDom } from '../../../src/i18n/index.js';
-import { getMode, getApiBase, setMode, isAbort, getConversations, getConversation, getChecklists, getEvaluation, runEvaluation, importConversations, assignOperator, getOperators, getEvaluations } from '../../api.js';
+import { getMode, getApiBase, setMode, isAbort, getConversations, getConversation, getChecklists, getEvaluation, runEvaluation, importConversations, assignOperator, getOperators, getAppeals } from '../../api.js';
 import { esc, icon, num, tr, loc, chip, langTag, opCell, statusBadge, scoreIndicator, grossBadge, dateTime, criteriaCard, errorState, errorText, emptyState, mockBanner } from '../ui.js';
 import { mountList } from '../listPage.js';
 import { openModal, toast } from '../overlay.js';
@@ -92,7 +92,7 @@ const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s %
 
 export function mountConversation(root, ctx) {
   const id = ctx.id;
-  let conv = null, checklists = [], ev = null, evId = null, err = null, evErr = null, tab = 'transcript', running = false;
+  let conv = null, checklists = [], appeals = [], ev = null, evId = null, err = null, evErr = null, tab = 'transcript', running = false;
   let ac = new AbortController(), pollT = 0, hlT = 0, hlEl = null, evidenceWarn = '';
   const sig = () => ac.signal;
 
@@ -131,8 +131,13 @@ export function mountConversation(root, ctx) {
   async function loadEval(eid, rerender = true) {
     evId = eid; evErr = null;
     try { ev = await getEvaluation(eid, { signal: sig() }); } catch (e) { if (isAbort(e)) return; ev = null; evErr = e; }
+    await loadAppeals();
     if (rerender) renderEval();
     if (ev?.status === 'running') schedulePoll();
+  }
+
+  async function loadAppeals() {
+    try { appeals = (await getAppeals({ conversation_id: id, page_size: 100 }, { signal: sig() })).items || []; } catch (e) { if (isAbort(e)) return; appeals = []; }   // без списка апелляций кнопка остаётся доступной, дубликат отклонит Backend
   }
 
   function schedulePoll(tries = 0) {
@@ -188,7 +193,7 @@ export function mountConversation(root, ctx) {
 
   function evidenceBannerSet(msg) { evidenceWarn = msg; const w = trPane.querySelector('[data-warn]'); if (w) w.innerHTML = msg ? `<p class="banner banner--warn" role="alert">${icon('alert')}<span>${esc(msg)}</span></p>` : ''; }
 
-  function appealedSet() { return new Set(); }
+  function appealedSet() { return new Set(appeals.filter((a) => a.evaluation_id === evId && a.status === 'pending').map((a) => a.criterion_id)); }
 
   function renderEval() {
     if (!conv) return;
@@ -209,7 +214,7 @@ export function mountConversation(root, ctx) {
       inner = `<div class="evp__total"><div><span class="muted">${esc(t('ws.eval.total'))}</span>${scoreIndicator(ev.total_score)}${changed ? `<span class="evp__final">${esc(t('ws.eval.afterAppeals'))}: <b>${esc(num(ev.final_total_score))}</b></span>` : ''}</div>
         <div class="evp__flag evp__flag--${ev.gross_violation ? 'bad' : 'ok'}">${ev.gross_violation ? `${icon('alert')}${esc(t('ws.gross.found'))}` : `${icon('check-circle')}${esc(t('ws.gross.none'))}`}</div></div>
         <p class="form-hint">${esc(t('ws.eval.fromBackend'))} · ${esc(t('ws.eval.versionN', { n: num(ev.checklist_version) }))}${ev.source === 'mock' ? ` · ${esc(t('ws.mock.short'))}` : ''}</p>
-        <div class="crit-list">${(ev.criteria || []).map((c) => criteriaCard(c, { conversationId: conv.id, appeal: false, appealed: appealedSet(), showScore: true })).join('')}</div>`;
+        <div class="crit-list">${(ev.criteria || []).map((c) => criteriaCard(c, { conversationId: conv.id, appeal: true, appealed: appealedSet(), showScore: true })).join('')}</div>`;
     }
     evPane.innerHTML = `<header class="pane__head"><h3>${icon('sparkle')}${esc(t('ws.eval.title'))}</h3>${sel}</header>${runBox}${inner}`;
   }
@@ -281,11 +286,19 @@ export function mountConversation(root, ctx) {
     });
   }
 
+  async function openAppeal(criterionId) {
+    if (!ev || ev.status !== 'done') return;
+    const { openAppealForm } = await import('../appealForm.js');
+    openAppealForm({ evaluation: ev, criterionId, onDone: async () => { await loadAppeals(); conv.status = 'appealed'; renderHead(); renderEval(); } });
+  }
+
   function onClick(e) {
     const tb = e.target.closest('.tabs [role="tab"]');
     if (tb) { setTab(tb.dataset.tab); return; }
     const evl = e.target.closest('[data-evidence]');
     if (evl) { e.preventDefault(); focusMessage(evl.dataset.evidence); return; }
+    const ap = e.target.closest('[data-appeal]');
+    if (ap) { openAppeal(ap.dataset.appeal); return; }
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'run') run();
     else if (act === 'assign') openAssign();

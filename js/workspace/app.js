@@ -9,9 +9,10 @@ import { mountOverview } from './pages/overview.js';
 import { mountConversations, mountConversation } from './pages/conversations.js';
 import { mountEvaluations, mountEvaluation } from './pages/evaluations.js';
 import { mountOperators, mountOperator } from './pages/operators.js';
+import { mountAppeals, mountAppealDetail } from './pages/appeals.js';
 import { mountSoon } from './pages/soon.js';
 const soon = (stage) => (root) => mountSoon(root, { stage });
-const mountAppeals = soon(3), mountAppealDetail = soon(3), mountChecklist = soon(3);
+const mountChecklist = soon(3);
 
 // list — страница списка/раздела, detail — страница объекта (#/dashboard/<раздел>/<id>)
 const SECTIONS = {

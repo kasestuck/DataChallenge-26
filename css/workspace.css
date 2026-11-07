@@ -415,3 +415,21 @@ em.muted { font-style: normal; }
 .row--ah { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto auto; }
 @media (max-width: 1100px) { .opr__grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .row--ah { grid-template-columns: minmax(0, 1fr) auto; } .row--ah .row__op { grid-column: 1 / -1; order: 5; } }
+
+/* ---------- Апелляции ---------- */
+.cut { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; color: var(--c-text); }
+.orig { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #f6faf7; border: 1px solid var(--c-line); }
+.orig__row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--c-muted); } .orig__row b { color: var(--c-ink); }
+.orig__exp { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--c-text); }
+.orig__exp.quote { padding: 10px 14px; border-left: 3px solid var(--c-green); background: #f6faf7; border-radius: 0 10px 10px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kv { display: grid; gap: 8px; margin: 0 0 10px; }
+.kv > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13.5px; border-bottom: 1px solid #eef4f0; padding-bottom: 6px; }
+.kv dt { color: var(--c-muted); font-weight: 600; } .kv dd { margin: 0; color: var(--c-ink); font-weight: 600; text-align: right; }
+.seg-field { display: flex; gap: 10px; flex-wrap: wrap; margin: 0; padding: 0; border: 0; } .seg-field legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--c-text); }
+.radio { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 14px; border: 1px solid var(--c-line); border-radius: 12px; background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.radio:has(input:checked) { border-color: var(--c-green); background: var(--c-mint); color: var(--c-green-dark); }
+.radio input { accent-color: var(--c-green-600); width: 18px; height: 18px; }
+.radio:has(input:focus-visible) { outline: 3px solid var(--c-green-dark); outline-offset: 2px; }
+[data-newscore][hidden] { display: none; }
+.form-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.field textarea:focus-visible, .field input:focus-visible, .field select:focus-visible { outline: 3px solid var(--c-green-dark); outline-offset: 2px; }

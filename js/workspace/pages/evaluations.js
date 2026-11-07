@@ -6,8 +6,8 @@ import { esc, icon, num, tr, langTag, opCell, statusBadge, scoreIndicator, gross
 import { mountList } from '../listPage.js';
 
 const LANG_OPTS = [['', 'ws.f.all'], ['ru', 'ws.lang.ru'], ['kk', 'ws.lang.kk'], ['en', 'ws.lang.en']];
-// Апелляции подключаются на этапе «Appeals» (кнопка в карточках критериев и форма appealForm.js)
-const APPEALS_ON = false;
+// Кнопка «Подать апелляцию» в карточках критериев (форма — appealForm.js)
+const APPEALS_ON = true;
 const RANGES = { '90-100': [90, 100], '75-89': [75, 89], '60-74': [60, 74], '0-59': [0, 59] };
 
 // ======================= список =======================
