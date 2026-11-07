@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Freedom CQA Insight</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- Welcome -->
+    <section class="view view--welcome" data-view="welcome" aria-labelledby="welcome-title">
+      <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+
+      <div class="welcome__content">
+        <!-- PLACEHOLDER: замените на официальный логотип Freedom (файл логотипа в репозитории отсутствует). -->
+        <svg class="welcome__logo" viewBox="0 0 132 152" aria-hidden="true" focusable="false">
+          <path fill="#4fae3e" d="M0 0h132v70c0 40-30 68-66 82C30 138 0 110 0 70z"/>
+          <path fill="#0b4d2a" d="M52 28h80v6c-10 0-22 8-22 22v14c0 40-24 66-44 82C48 138 52 110 52 70z"/>
+        </svg>
+
+        <h1 class="welcome__title" id="welcome-title" data-fisheye>Freedom</h1>
+        <p class="welcome__subtitle">CQA Insight</p>
+        <button class="btn" type="button" id="start-btn">Let’s start</button>
+      </div>
+    </section>
+
+    <!-- Login -->
+    <section class="view view--login" data-view="login" aria-labelledby="login-title" hidden>
+      <form class="card login" id="login-form" novalidate>
+        <h2 id="login-title">Вход в CQA Insight</h2>
+        <label class="field">
+          <span>Email</span>
+          <input id="login-email" name="email" type="email" autocomplete="username" required>
+        </label>
+        <label class="field">
+          <span>Пароль</span>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="form-error" id="login-error" role="alert" hidden>Введите email и пароль.</p>
+        <button class="btn" type="submit">Войти</button>
+        <a class="link" href="#/welcome">← Назад</a>
+      </form>
+    </section>
+
+    <!-- Dashboard (заглушка) -->
+    <section class="view view--dashboard" data-view="dashboard" aria-labelledby="dash-title" hidden>
+      <header class="dash__head">
+        <h2 id="dash-title">Dashboard</h2>
+        <button class="btn btn--ghost" type="button" id="logout-btn">Выйти</button>
+      </header>
+      <div class="dash__grid">
+        <article class="card"><h3>Звонков</h3><p class="kpi">—</p></article>
+        <article class="card"><h3>Средняя оценка</h3><p class="kpi">—</p></article>
+        <article class="card"><h3>Нарушений</h3><p class="kpi">—</p></article>
+      </div>
+    </section>
+
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
