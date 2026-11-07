@@ -124,7 +124,7 @@ export function mountConversation(root, ctx) {
     render();
     if (!err) {
       const mid = ctx.query.get('evidence');
-      if (mid) requestAnimationFrame(() => focusMessage(mid, { fromUrl: true }));
+      if (mid) focusMessage(mid, { fromUrl: true });   // DOM уже построен синхронно в render(); rAF не нужен (в скрытой вкладке он не срабатывает)
     }
   }
 

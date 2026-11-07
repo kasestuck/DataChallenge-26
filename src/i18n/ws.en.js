@@ -2,6 +2,7 @@
 // Original dialog text is never translated — interface only.
 export default {
   common: { close: 'Close', cancel: 'Cancel', confirm: 'Confirm', save: 'Save', back: 'Back', delete: 'Delete', add: 'Add', yes: 'Yes', no: 'No' },
+  evl: { search: 'Search by evaluation ID, conversation and operator', emptyTitle: 'No evaluations yet', emptyText: 'Run an evaluation from the conversation page — the result will appear here.', range: 'Score', version: 'Checklist', onlyGross: 'Only with violation', colId: 'Evaluation ID', colDialog: 'Conversation', back: 'Back to evaluations', notFoundTitle: 'Evaluation not found', notFoundText: 'There is no evaluation “{id}” in the system.', counts: 'Criteria evaluated: {n}, N/A: {na}', result: 'Evaluation result', openDialog: 'Open conversation' },
   mock: { short: 'demo data' },
   list: { reset: 'Reset filters', noMatchTitle: 'Nothing found', noMatchText: 'Change the query or reset the filters.' },
   f: { all: 'All', language: 'Language', channel: 'Channel', status: 'Status', operator: 'Operator' },
