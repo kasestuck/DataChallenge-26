@@ -1,12 +1,21 @@
-import { createWave } from './wave.js';
-import { initFishEye } from './fisheye.js';
+import { initLanding } from './landing.js';
+import { initI18n, setLang, getLang, onLangChange, LANGS } from '../src/i18n/index.js';
 
-const AUTH_KEY = 'cqa-auth';   // заглушка: реального API/логина в репозитории пока нет
+const AUTH_KEY = 'cqa-demo-auth';   // ДЕМО: флаг в sessionStorage, настоящей авторизации нет
 const $ = (s) => document.querySelector(s);
 const views = Object.fromEntries([...document.querySelectorAll('.view')].map((v) => [v.dataset.view, v]));
-const wave = createWave($('#wave'));
-const fish = initFishEye($('[data-fisheye]'));
 
+initI18n();
+const landing = initLanding();
+
+// ---------- переключатель языка ----------
+const langButtons = [...document.querySelectorAll('[data-lang]')];
+const markLang = () => langButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
+langButtons.forEach((b) => b.addEventListener('click', () => { if (LANGS.includes(b.dataset.lang)) setLang(b.dataset.lang); }));
+onLangChange(markLang);
+markLang();
+
+// ---------- роутер (hash) ----------
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const dur = () => (reduced() ? 0 : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dur')) || 450);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -29,31 +38,36 @@ async function show(name) {
   const to = views[name];
 
   if (from) {
-    if (current === 'welcome') wave.setCalm(0.15);   // 1. уменьшить амплитуду волны
+    if (current === 'welcome') landing.calm(0.15);   // 1. уменьшить амплитуду волны
     from.classList.remove('is-active');              // 2. плавно скрыть контент
     await wait(dur());
     if (my !== token) return;
     from.hidden = true;
-    if (current === 'welcome') { wave.stop(); fish.destroy(); }
+    if (current === 'welcome') landing.leave();
   }
 
   current = name;
   to.hidden = false;
-  if (name === 'welcome') { wave.reset(); wave.start(); fish.refresh(); }
+  window.scrollTo(0, 0);
+  if (name === 'welcome') landing.enter();
   await nextFrame();
   if (my !== token) return;
   to.classList.add('is-active');                     // 3. fade + translateY
   if (name === 'login') $('#login-email').focus({ preventScroll: true });   // 4. фокус на 1-м поле
   if (name === 'dashboard') { const h = $('#dash-title'); h.tabIndex = -1; h.focus({ preventScroll: true }); }
-  if (name === 'welcome') $('#start-btn').focus({ preventScroll: true });
 }
 
 const go = (r) => (location.hash === `#/${r}` ? show(routeFromHash()) : (location.hash = `#/${r}`));
 
-$('#start-btn').addEventListener('click', () => go('login'));
+// Let's start и финальная CTA ведут на один и тот же Login
+document.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => go(b.dataset.nav)));
+$('#brand-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (current === 'welcome') scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); else go('welcome');
+});
 $('#logout-btn').addEventListener('click', () => {
   try { sessionStorage.removeItem(AUTH_KEY); } catch { /* storage недоступен */ }
-  go('login');
+  go('welcome');
 });
 $('#login-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -67,11 +81,12 @@ $('#login-form').addEventListener('submit', (e) => {
 });
 window.addEventListener('hashchange', () => show(routeFromHash()));
 
-// первичная загрузка — без анимации ухода
+// первичная загрузка — без анимации ухода; работает и после refresh на любом маршруте
 const first = routeFromHash();
+if (location.hash && `#/${first}` !== location.hash) history.replaceState(null, '', `#/${first}`);
 current = first;
-views[first].hidden = false;
-if (first === 'welcome') { wave.start(); fish.refresh(); }
+Object.entries(views).forEach(([name, v]) => { v.hidden = name !== first; });
+if (first === 'welcome') landing.enter();
 requestAnimationFrame(() => {
   views[first].classList.add('is-active');
   if (first === 'login') $('#login-email').focus({ preventScroll: true });

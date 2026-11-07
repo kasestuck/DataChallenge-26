@@ -12,11 +12,12 @@ const hash = (n) => {
   return s - Math.floor(s);
 };
 
-export function createWave(canvas) {
+// opts.interactive — реакция на курсор; opts.amp — общий множитель амплитуды; opts.seed — сдвиг формы
+export function createWave(canvas, { interactive = true, amp: baseAmp = 1, seed = 0 } = {}) {
   const ctx = canvas.getContext('2d');
   const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
   let w = 0, h = 0, bars = [];
-  let raf = 0, running = false, wantRun = false, last = 0, t = 0;
+  let raf = 0, running = false, wantRun = false, last = 0, t = seed * 10;
   let calm = 1, calmTarget = 1;                  // множитель амплитуды (переход на Login)
   let px = 0, infl = 0, inflTarget = 0;
   let hasPointer = false, pointerX = 0, pointerY = 0;
@@ -33,17 +34,17 @@ export function createWave(canvas) {
     bars = Array.from({ length: n }, (_, i) => ({
       x: Math.round(i * BAR_GAP + BAR_GAP / 2) + 0.5,
       u: n > 1 ? i / (n - 1) : 0,
-      a: hash(i),
-      up: 0.55 + 0.45 * hash(i + 999),
-      down: 0.55 + 0.45 * hash(i + 4321),
+      a: hash(i + seed),
+      up: 0.55 + 0.45 * hash(i + 999 + seed),
+      down: 0.55 + 0.45 * hash(i + 4321 + seed),
     }));
     draw();
   }
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    const mid = h / 2, maxAmp = h * 0.46;
-    const hover = !reduceMq.matches && infl > 0.001;
+    const mid = h / 2, maxAmp = h * 0.46 * baseAmp;
+    const hover = interactive && !reduceMq.matches && infl > 0.001;
     ctx.lineWidth = BAR_W;
     ctx.lineCap = 'round';
     ctx.strokeStyle = `rgba(${COLOR}, .5)`;
@@ -74,14 +75,16 @@ export function createWave(canvas) {
     last = now;
     t += dt;
     calm += (calmTarget - calm) * (1 - Math.exp(-dt * 7));
-    if (hasPointer) {
-      const r = canvas.getBoundingClientRect();
-      px += (pointerX - r.left - px) * (1 - Math.exp(-dt * 10));
-      inflTarget = Math.abs(pointerY - (r.top + r.height / 2)) < r.height / 2 + 60 ? 1 : 0;
-    } else {
-      inflTarget = 0;
+    if (interactive) {
+      if (hasPointer) {
+        const r = canvas.getBoundingClientRect();
+        px += (pointerX - r.left - px) * (1 - Math.exp(-dt * 10));
+        inflTarget = Math.abs(pointerY - (r.top + r.height / 2)) < r.height / 2 + 60 ? 1 : 0;
+      } else {
+        inflTarget = 0;
+      }
+      infl += (inflTarget - infl) * (1 - Math.exp(-dt * 6));
     }
-    infl += (inflTarget - infl) * (1 - Math.exp(-dt * 6));
     draw();
     raf = requestAnimationFrame(frame);
   }
@@ -113,17 +116,20 @@ export function createWave(canvas) {
       if (wantRun) return;
       wantRun = true;
       ro.observe(canvas);
-      window.addEventListener('pointermove', onMove, { passive: true });
-      window.addEventListener('pointerup', onLeave);
-      window.addEventListener('pointercancel', onLeave);
-      window.addEventListener('blur', onLeave);
-      document.addEventListener('pointerout', onOut);
+      if (interactive) {
+        window.addEventListener('pointermove', onMove, { passive: true });
+        window.addEventListener('pointerup', onLeave);
+        window.addEventListener('pointercancel', onLeave);
+        window.addEventListener('blur', onLeave);
+        document.addEventListener('pointerout', onOut);
+      }
       document.addEventListener('visibilitychange', onVisibility);
       reduceMq.addEventListener('change', onMotionPref);
       resize();
       startLoop();
     },
     stop() {
+      if (!wantRun) return;
       wantRun = false;
       pauseLoop();
       ro.disconnect();

@@ -3,59 +3,395 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Freedom CQA Insight</title>
+  <title>CQA Insight</title>
+  <meta name="description" content="">
+  <link rel="icon" href="assets/freedom-logo.png" type="image/png">
   <link rel="stylesheet" href="css/styles.css">
+  <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
+  <!-- Иконки (inline SVG, без внешних зависимостей) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-headset" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/><path d="M19 20c0 1.5-2 2-5 2"/></symbol>
+      <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V4M19 20v-6"/></symbol>
+      <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 16v5M16.5 18.5h5"/></symbol>
+      <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18"/></symbol>
+      <symbol id="i-quote" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 0 0 4 9.5V13a2 2 0 0 0 2 2h3v-1H6.5M20 7h-3.5A2.5 2.5 0 0 0 14 9.5V13a2 2 0 0 0 2 2h3v-1h-2.5"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+      <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5v14M15.5 5v14" stroke-width="3"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.6 4 6"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- Верхняя панель: бренд, подпись, переключатель языка (на всех экранах) -->
+  <header class="topbar" id="topbar">
+    <a class="brand" href="#/welcome" id="brand-link">
+      <img src="assets/freedom-logo.png" alt="" width="26" height="30">
+      <span>Freedom</span>
+    </a>
+    <div class="topbar__meta">
+      <span>CQA Insight</span><i aria-hidden="true"></i><span data-i18n="brand.tagline"></span>
+    </div>
+    <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
+      <button type="button" data-lang="ru" lang="ru">RU</button>
+      <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+      <button type="button" data-lang="en" lang="en">EN</button>
+    </div>
+  </header>
+
   <main id="app">
 
-    <!-- Welcome -->
-    <section class="view view--welcome" data-view="welcome" aria-labelledby="welcome-title">
-      <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+    <!-- ===================== LANDING ===================== -->
+    <div class="view view--welcome" data-view="welcome">
 
-      <div class="welcome__content">
-        <!-- PLACEHOLDER: замените на официальный логотип Freedom (файл логотипа в репозитории отсутствует). -->
-        <svg class="welcome__logo" viewBox="0 0 132 152" aria-hidden="true" focusable="false">
-          <path fill="#4fae3e" d="M0 0h132v70c0 40-30 68-66 82C30 138 0 110 0 70z"/>
-          <path fill="#0b4d2a" d="M52 28h80v6c-10 0-22 8-22 22v14c0 40-24 66-44 82C48 138 52 110 52 70z"/>
+      <!-- Continuous Green Flow: одна лента через всю страницу (строится в JS) -->
+      <svg class="flow" id="flow" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="flow-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#4fb84f" stop-opacity=".0"/>
+            <stop offset=".25" stop-color="#4fb84f" stop-opacity=".9"/>
+            <stop offset="1" stop-color="#045333" stop-opacity=".9"/>
+          </linearGradient>
+        </defs>
+        <path class="flow__ghost" id="flow-ghost"/>
+        <path class="flow__band" id="flow-band"/>
+        <path class="flow__line" id="flow-line"/>
+      </svg>
+
+      <!-- 1. Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="ribbons" aria-hidden="true"><i></i><i></i><i></i></div>
+
+        <div class="hero__main">
+          <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+
+          <!-- Гарнитура (иллюстрация) -->
+          <div class="hero__headset floaty" role="img" data-i18n-attr="aria-label:hero.headset">
+            <svg viewBox="0 0 260 280" focusable="false" aria-hidden="true">
+              <defs>
+                <linearGradient id="hs-band" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bff0b8"/><stop offset=".5" stop-color="#4fb84f"/><stop offset="1" stop-color="#045333"/></linearGradient>
+                <radialGradient id="hs-cup" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#e9ffe5"/><stop offset=".45" stop-color="#6fd06a"/><stop offset="1" stop-color="#0c6b3c"/></radialGradient>
+                <radialGradient id="hs-cup2" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#d9f6d4"/><stop offset="1" stop-color="#2f9a4a"/></radialGradient>
+              </defs>
+              <ellipse cx="130" cy="262" rx="78" ry="9" fill="#045333" opacity=".12"/>
+              <path d="M44 150a86 86 0 0 1 172 0" fill="none" stroke="url(#hs-band)" stroke-width="16" stroke-linecap="round"/>
+              <path d="M52 146a78 78 0 0 1 156 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.5" stroke-linecap="round"/>
+              <ellipse cx="46" cy="170" rx="34" ry="46" fill="url(#hs-cup)"/>
+              <ellipse cx="46" cy="170" rx="19" ry="28" fill="url(#hs-cup2)" opacity=".85"/>
+              <ellipse cx="214" cy="170" rx="34" ry="46" fill="url(#hs-cup)"/>
+              <ellipse cx="214" cy="170" rx="19" ry="28" fill="url(#hs-cup2)" opacity=".85"/>
+              <path d="M222 208c0 30-38 44-84 44" fill="none" stroke="#0c6b3c" stroke-width="5" stroke-linecap="round"/>
+              <ellipse cx="128" cy="252" rx="13" ry="8" fill="#045333"/>
+            </svg>
+          </div>
+
+          <div class="hero__center">
+            <img class="hero__logo" src="assets/freedom-logo.png" alt="" width="116" height="134">
+            <h1 class="hero__title" id="hero-title" data-fisheye>Freedom</h1>
+            <p class="hero__subtitle">CQA Insight</p>
+            <p class="hero__desc" data-i18n="hero.desc"></p>
+            <button class="btn btn--lg btn--arrow" type="button" id="start-btn" data-nav="login">
+              <span data-i18n="hero.cta"></span>
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </button>
+          </div>
+
+          <!-- Стеклянная аналитическая панель (иллюстрация) -->
+          <div class="hero__panel floaty floaty--b" aria-hidden="true">
+            <div class="gpanel">
+              <div class="gpanel__bars"><i style="--h:26%"></i><i style="--h:38%"></i><i style="--h:34%"></i><i style="--h:52%"></i><i style="--h:68%"></i><i style="--h:86%"></i></div>
+              <svg class="gpanel__line" viewBox="0 0 200 110" preserveAspectRatio="none"><path d="M6 92 L48 70 L88 78 L130 44 L170 24" fill="none" stroke="#4fb84f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="48" cy="70" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/><circle cx="88" cy="78" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/><circle cx="130" cy="44" r="4" fill="#fff" stroke="#4fb84f" stroke-width="2"/></svg>
+            </div>
+            <div class="aichip"><span>AI</span></div>
+          </div>
+        </div>
+
+        <ul class="pills">
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-headset"/></svg><div><b data-i18n="pills.p1.title"></b><span data-i18n="pills.p1.text"></span></div></li>
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-bars"/></svg><div><b data-i18n="pills.p2.title"></b><span data-i18n="pills.p2.text"></span></div></li>
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-sparkle"/></svg><div><b data-i18n="pills.p3.title"></b><span data-i18n="pills.p3.text"></span></div></li>
+        </ul>
+
+        <button class="scrollhint" type="button" id="scroll-hint" data-i18n-attr="aria-label:hero.scroll"><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+      </section>
+
+      <!-- 2. About -->
+      <section class="section about" id="about" aria-labelledby="about-title">
+        <div class="container about__grid">
+          <div class="about__text">
+            <p class="eyebrow reveal" data-i18n="about.eyebrow"></p>
+            <h2 class="display reveal" id="about-title"><span data-i18n="about.title"></span> <em data-i18n="about.titleAccent"></em></h2>
+            <p class="lead reveal" data-i18n="about.p1"></p>
+            <ul class="ticks reveal">
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c1"></span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c2"></span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c3"></span></li>
+            </ul>
+          </div>
+
+          <!-- Карточка аудиодиалога: чисто визуальная демонстрация, звук не воспроизводится -->
+          <div class="audio glass reveal" id="audio-card">
+            <div class="audio__badge floaty floaty--c">
+              <svg class="ico ico--solid" aria-hidden="true"><use href="#i-check"/></svg>
+              <div><b data-i18n="about.audio.badge"></b><span>AI</span></div>
+            </div>
+            <div class="audio__head"><span class="tag" data-i18n="common.demo"></span></div>
+            <div class="audio__player">
+              <button class="audio__btn" type="button" id="audio-btn" aria-pressed="false" data-i18n-attr="aria-label:about.audio.play">
+                <svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>
+              </button>
+              <div class="audio__wave" id="audio-wave" aria-hidden="true"></div>
+            </div>
+            <div class="audio__progress" aria-hidden="true"><i id="audio-bar"></i></div>
+            <div class="audio__time" aria-hidden="true"><span id="audio-now">0:00</span><span>/ 2:14</span></div>
+            <div class="audio__result">
+              <h3 data-i18n="about.audio.result"></h3>
+              <ul>
+                <li><span data-i18n="features.checklist.i1"></span><b class="ok">✓</b></li>
+                <li><span data-i18n="features.checklist.i2"></span><b class="ok">✓</b></li>
+                <li><span data-i18n="features.checklist.i3"></span><b class="ok">✓</b></li>
+              </ul>
+              <p class="audio__score"><span data-i18n="about.audio.total"></span><strong>92<small>/100</small></strong></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. How it works -->
+      <section class="section how" id="how" aria-labelledby="how-title">
+        <div class="container how__grid">
+          <div class="how__head">
+            <p class="eyebrow reveal" data-i18n="how.eyebrow"></p>
+            <h2 class="h2 reveal" id="how-title"><span data-i18n="how.title"></span> <em data-i18n="how.titleAccent"></em></h2>
+          </div>
+          <ol class="steps">
+            <li class="step glass reveal" style="--i:0">
+              <span class="step__num">01</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-folder"/></svg>
+              <h3 data-i18n="how.s1.title"></h3>
+              <p data-i18n="how.s1.text"></p>
+              <div class="viz viz--files" aria-hidden="true"><span><svg class="ico"><use href="#i-file"/></svg>call_0412</span><span><svg class="ico"><use href="#i-file"/></svg>chat_0388</span><span class="viz__bar"><i></i></span></div>
+            </li>
+            <li class="step glass reveal" style="--i:1">
+              <span class="step__num">02</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-cpu"/></svg>
+              <h3 data-i18n="how.s2.title"></h3>
+              <p data-i18n="how.s2.text"></p>
+              <div class="viz viz--scan" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            </li>
+            <li class="step glass reveal" style="--i:2">
+              <span class="step__num">03</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-trend"/></svg>
+              <h3 data-i18n="how.s3.title"></h3>
+              <p data-i18n="how.s3.text"></p>
+              <div class="viz viz--result" aria-hidden="true"><strong>92</strong><span lang="ru">«…вернусь сегодня до 18:00»</span></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 4. Features (bento) -->
+      <section class="section features" id="features" aria-labelledby="feat-title">
+        <div class="container">
+          <p class="eyebrow reveal" data-i18n="features.eyebrow"></p>
+          <h2 class="h2 reveal" id="feat-title"><span data-i18n="features.title"></span> <em data-i18n="features.titleAccent"></em></h2>
+
+          <div class="bento">
+            <article class="bcard bcard--ai glass reveal" style="--i:0">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-bolt"/></svg>
+              <div class="bcard__txt">
+                <h3 data-i18n="features.ai.title"></h3>
+                <p data-i18n="features.ai.text"></p>
+              </div>
+              <div class="ring" aria-hidden="true">
+                <svg viewBox="0 0 120 120"><circle class="ring__bg" cx="60" cy="60" r="50"/><circle class="ring__fg" cx="60" cy="60" r="50" pathLength="100"/></svg>
+                <strong>92<small>/100</small></strong>
+              </div>
+            </article>
+
+            <article class="bcard bcard--multi glass reveal" style="--i:1">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-globe"/></svg>
+              <h3 data-i18n="features.multi.title"></h3>
+              <p data-i18n="features.multi.text"></p>
+              <div class="chips" aria-hidden="true"><b>RU</b><b>ҚАЗ</b><b>EN</b></div>
+            </article>
+
+            <article class="bcard bcard--evidence glass reveal" style="--i:2">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-quote"/></svg>
+              <h3 data-i18n="features.evidence.title"></h3>
+              <!-- Фрагмент диалога на языке оригинала: не локализуется -->
+              <blockquote class="quote" lang="ru">«Я проверю ваш вопрос и вернусь <mark>сегодня до 18:00</mark>.»</blockquote>
+              <span class="tag tag--accent" data-i18n="features.evidence.tag"></span>
+            </article>
+
+            <article class="bcard bcard--ops glass reveal" style="--i:3">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-bars"/></svg>
+              <h3 data-i18n="features.operator.title"></h3>
+              <p data-i18n="features.operator.text"></p>
+              <div class="minibars" aria-hidden="true"><i style="--h:34%"></i><i style="--h:52%"></i><i style="--h:46%"></i><i style="--h:70%"></i><i style="--h:88%"></i></div>
+            </article>
+
+            <article class="bcard bcard--appeals glass reveal" style="--i:4">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-layers"/></svg>
+              <h3 data-i18n="features.appeals.title"></h3>
+              <p data-i18n="features.appeals.text"></p>
+              <ol class="stepper">
+                <li class="is-done"><span><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><em data-i18n="features.appeals.filed"></em></li>
+                <li class="is-now"><span><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg></span><em data-i18n="features.appeals.review"></em></li>
+                <li><span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></span><em data-i18n="features.appeals.decided"></em></li>
+              </ol>
+            </article>
+
+            <article class="bcard bcard--check glass reveal" style="--i:5">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-check-square"/></svg>
+              <h3 data-i18n="features.checklist.title"></h3>
+              <p data-i18n="features.checklist.text"></p>
+              <ul class="critlist">
+                <li><button type="button" role="checkbox" aria-checked="true"><span class="box"></span><span data-i18n="features.checklist.i1"></span></button></li>
+                <li><button type="button" role="checkbox" aria-checked="true"><span class="box"></span><span data-i18n="features.checklist.i2"></span></button></li>
+                <li><button type="button" role="checkbox" aria-checked="false"><span class="box"></span><span data-i18n="features.checklist.i3"></span></button></li>
+              </ul>
+              <span class="addcrit"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="features.checklist.add"></span></span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Analytics preview -->
+      <section class="section preview" id="preview-section" aria-labelledby="prev-title">
+        <div class="container preview__grid">
+          <div class="preview__text">
+            <p class="eyebrow reveal" data-i18n="preview.eyebrow"></p>
+            <h2 class="h2 reveal" id="prev-title"><span data-i18n="preview.title"></span> <em data-i18n="preview.titleAccent"></em></h2>
+            <p class="lead reveal" data-i18n="preview.text"></p>
+            <p class="demo-note reveal"><span class="tag tag--accent" data-i18n="common.demo"></span> <span data-i18n="preview.demoNote"></span></p>
+          </div>
+
+          <div class="appwin reveal" id="preview">
+            <div class="appwin__bar">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="appwin__title">CQA Insight</span>
+              <span class="tag tag--accent" id="preview-demo" data-i18n="common.demo"></span>
+            </div>
+            <div class="appwin__body">
+              <nav class="side" aria-hidden="true">
+                <span class="is-on"><svg class="ico"><use href="#i-home"/></svg></span>
+                <span><svg class="ico"><use href="#i-bars"/></svg></span>
+                <span><svg class="ico"><use href="#i-users"/></svg></span>
+                <span><svg class="ico"><use href="#i-chat"/></svg></span>
+                <span><svg class="ico"><use href="#i-settings"/></svg></span>
+              </nav>
+              <div class="appmain">
+                <div class="kpis">
+                  <div class="kpi"><span data-i18n="preview.avg"></span><strong id="kpi-avg"></strong><em class="delta" id="kpi-delta"></em></div>
+                  <div class="kpi"><span data-i18n="preview.checked"></span><strong id="kpi-checked"></strong></div>
+                  <div class="kpi"><span data-i18n="preview.appeals"></span><strong id="kpi-appeals"></strong></div>
+                </div>
+                <div class="mid">
+                  <div class="pcard pcard--chart">
+                    <h3 data-i18n="preview.chart"></h3>
+                    <svg class="chart" id="chart" viewBox="0 0 600 200" role="img" data-i18n-attr="aria-label:preview.chart"></svg>
+                  </div>
+                  <div class="pcard pcard--status">
+                    <h3 data-i18n="preview.statuses"></h3>
+                    <ul class="statuses" id="statuses"></ul>
+                  </div>
+                </div>
+                <div class="pcard pcard--table">
+                  <h3 data-i18n="preview.table"></h3>
+                  <div class="tablewrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th data-i18n="preview.col.id"></th>
+                          <th class="hide-sm" data-i18n="preview.col.operator"></th>
+                          <th class="hide-sm" data-i18n="preview.col.lang"></th>
+                          <th data-i18n="preview.col.score"></th>
+                          <th data-i18n="preview.col.status"></th>
+                          <th class="hide-sm" data-i18n="preview.col.date"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="dialog-rows"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Final CTA + footer -->
+      <section class="section cta" aria-labelledby="cta-title">
+        <svg class="cta__arc" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path class="arc arc--a" d="M-40 300 C 320 40, 1080 40, 1480 300"/>
+          <path class="arc arc--b" d="M-40 330 C 360 90, 1040 90, 1480 330"/>
         </svg>
+        <div class="container cta__box reveal">
+          <h2 class="h2" id="cta-title"><span data-i18n="cta.title"></span> <em data-i18n="cta.titleAccent"></em></h2>
+          <p class="lead" data-i18n="cta.text"></p>
+          <button class="btn btn--lg btn--light btn--arrow" type="button" id="cta-btn" data-nav="login">
+            <span data-i18n="cta.button"></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </button>
+        </div>
+      </section>
 
-        <h1 class="welcome__title" id="welcome-title" data-fisheye>Freedom</h1>
-        <p class="welcome__subtitle">CQA Insight</p>
-        <button class="btn" type="button" id="start-btn">Let’s start</button>
-      </div>
-    </section>
+      <footer class="footer">
+        <strong>CQA Insight</strong>
+        <span data-i18n="footer.text"></span>
+      </footer>
+    </div>
 
-    <!-- Login -->
-    <section class="view view--login" data-view="login" aria-labelledby="login-title" hidden>
-      <form class="card login" id="login-form" novalidate>
-        <h2 id="login-title">Вход в CQA Insight</h2>
+    <!-- ===================== LOGIN ===================== -->
+    <div class="view view--login" data-view="login" hidden>
+      <form class="card login" id="login-form" novalidate aria-labelledby="login-title">
+        <h2 id="login-title" data-i18n="login.title"></h2>
+        <p class="demo-note" data-i18n="login.demo"></p>
         <label class="field">
-          <span>Email</span>
-          <input id="login-email" name="email" type="email" autocomplete="username" required>
+          <span data-i18n="login.email"></span>
+          <input id="login-email" name="email" type="email" autocomplete="username" required data-i18n-attr="placeholder:login.emailPlaceholder">
         </label>
         <label class="field">
-          <span>Пароль</span>
+          <span data-i18n="login.password"></span>
           <input id="login-password" name="password" type="password" autocomplete="current-password" required>
         </label>
-        <p class="form-error" id="login-error" role="alert" hidden>Введите email и пароль.</p>
-        <button class="btn" type="submit">Войти</button>
-        <a class="link" href="#/welcome">← Назад</a>
+        <p class="form-error" id="login-error" role="alert" hidden data-i18n="login.error"></p>
+        <button class="btn" type="submit" data-i18n="login.submit"></button>
+        <a class="link" href="#/welcome" data-i18n="login.back"></a>
       </form>
-    </section>
+    </div>
 
-    <!-- Dashboard (заглушка) -->
-    <section class="view view--dashboard" data-view="dashboard" aria-labelledby="dash-title" hidden>
+    <!-- ===================== DASHBOARD ===================== -->
+    <div class="view view--dashboard" data-view="dashboard" hidden>
       <header class="dash__head">
-        <h2 id="dash-title">Dashboard</h2>
-        <button class="btn btn--ghost" type="button" id="logout-btn">Выйти</button>
+        <h2 id="dash-title" data-i18n="dash.title"></h2>
+        <button class="btn btn--ghost" type="button" id="logout-btn" data-i18n="dash.logout"></button>
       </header>
       <div class="dash__grid">
-        <article class="card"><h3>Звонков</h3><p class="kpi">—</p></article>
-        <article class="card"><h3>Средняя оценка</h3><p class="kpi">—</p></article>
-        <article class="card"><h3>Нарушений</h3><p class="kpi">—</p></article>
+        <article class="card"><h3 data-i18n="dash.dialogs"></h3><p class="kpi-num">—</p></article>
+        <article class="card"><h3 data-i18n="dash.avg"></h3><p class="kpi-num">—</p></article>
+        <article class="card"><h3 data-i18n="dash.violations"></h3><p class="kpi-num">—</p></article>
       </div>
-    </section>
+      <p class="demo-note dash__note" data-i18n="dash.empty"></p>
+    </div>
 
   </main>
   <script type="module" src="js/main.js"></script>

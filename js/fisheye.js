@@ -18,12 +18,12 @@ export function initFishEye(el) {
     return { s, cx: 0, cy: 0, cur: 1, target: 1 };
   });
 
-  let raf = 0, active = false, px = 0, py = 0, inside = false;
+  let raf = 0, active = false, px = 0, py = 0, inside = false, measureRaf = 0;
   const enabled = () => mq.matches && !reduce.matches && !document.hidden;
   const apply = (l) => { l.s.style.transform = l.cur === 1 ? '' : `scale(${l.cur.toFixed(4)})`; };
 
   function measure() {
-    // центры букв не зависят от scale (масштаб от центра), но сбрасываем для точности
+    // scale идёт от центра, но сбрасываем для точности
     letters.forEach((l) => { l.s.style.transform = ''; });
     letters.forEach((l) => {
       const r = l.s.getBoundingClientRect();
@@ -32,6 +32,11 @@ export function initFishEye(el) {
     });
     letters.forEach(apply);
   }
+  // при прокрутке позиции в viewport меняются — пересчитываем один раз за кадр
+  const measureSoon = () => {
+    if (measureRaf) return;
+    measureRaf = requestAnimationFrame(() => { measureRaf = 0; measure(); });
+  };
 
   function tick() {
     let moving = false;
@@ -68,7 +73,8 @@ export function initFishEye(el) {
     window.addEventListener('pointermove', onMove, { passive: true });
     document.addEventListener('pointerout', onOut);
     window.addEventListener('blur', onLeave);
-    window.addEventListener('resize', measure);
+    window.addEventListener('resize', measureSoon);
+    window.addEventListener('scroll', measureSoon, { passive: true });
   }
   function detach() {
     if (!active) return;
@@ -77,7 +83,8 @@ export function initFishEye(el) {
     window.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerout', onOut);
     window.removeEventListener('blur', onLeave);
-    window.removeEventListener('resize', measure);
+    window.removeEventListener('resize', measureSoon);
+    window.removeEventListener('scroll', measureSoon);
     cancelAnimationFrame(raf);
     raf = 0;
     letters.forEach((l) => { l.cur = l.target = 1; apply(l); });
