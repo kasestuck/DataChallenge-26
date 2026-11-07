@@ -130,6 +130,31 @@ def test_control_network_processes_only_returned_ids(environment, model_mock, mo
     assert len(model_mock) == 1 and model_mock[0]["conversation_id"] == "synthetic-a"
 
 
+def test_control_submission_checks_count_before_model_call(environment, model_mock, capsys):
+    assert process_control_set.main(["DEV", "--from-db", "--export-results", "--split", "dev",
+                                     "--team-name", "Synthetic Team"]) == 1
+    assert "SUBMISSION_COUNT_MISMATCH" in capsys.readouterr().err
+    assert not model_mock
+
+
+def test_control_exports_error_records_even_when_batch_has_failures(environment, monkeypatch, capsys):
+    seen = []
+    monkeypatch.setattr(process_control_set, "validate_group_records", lambda records, split: None)
+    async def failed_batch(*args, **kwargs):
+        return {"status": "completed", "counts": {"completed": 1, "failed": 1, "needs_review": 0}}
+    monkeypatch.setattr(process_control_set, "run_batch_report", failed_batch)
+    def capture(database_path, **kwargs):
+        seen.append(kwargs)
+        return {"status_counts": {"ok": 1, "error": 1}}
+    monkeypatch.setattr(process_control_set, "export_stored_results", capture)
+    assert process_control_set.main(["DEV", "--from-db", "--export-results", "--split", "dev",
+                                     "--team-name", "Synthetic Team"]) == 2
+    assert len(seen) == 1
+    assert seen[0]["conversation_ids"] == ["synthetic-a", "synthetic-b"]
+    assert seen[0]["checklist_version_id"]
+    assert '"error": 1' in capsys.readouterr().out
+
+
 def test_report_paths_cannot_escape_ignored_directory(environment):
     path, _, _ = environment
     with pytest.raises(ValueError, match="data/reports"):
