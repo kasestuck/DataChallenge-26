@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CQA Insight</title>
+  <meta name="description" content="">
+  <link rel="icon" href="assets/freedom-logo.png" type="image/png">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/workspace.css">
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <!-- Иконки (inline SVG, без внешних зависимостей) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-headset" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/><path d="M19 20c0 1.5-2 2-5 2"/></symbol>
+      <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V4M19 20v-6"/></symbol>
+      <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 16v5M16.5 18.5h5"/></symbol>
+      <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18"/></symbol>
+      <symbol id="i-quote" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 0 0 4 9.5V13a2 2 0 0 0 2 2h3v-1H6.5M20 7h-3.5A2.5 2.5 0 0 0 14 9.5V13a2 2 0 0 0 2 2h3v-1h-2.5"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+      <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5v14M15.5 5v14" stroke-width="3"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.6 4 6"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
+      <symbol id="i-chevrons-left" viewBox="0 0 24 24"><path d="M12 7l-5 5 5 5M18 7l-5 5 5 5"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+      <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- Freedom Glass Navigation: плавающая стеклянная панель, вкладки разделов, язык, вход; на мобильных — меню -->
+  <header class="topbar" id="topbar">
+    <div class="topbar__bar">
+      <a class="brand" href="#/welcome" id="brand-link">
+        <img src="assets/freedom-logo.png" alt="" width="26" height="30">
+        <span>Freedom</span>
+      </a>
+      <nav class="topbar__nav" data-i18n-attr="aria-label:nav.label">
+        <a class="navlink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+        <a class="navlink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+        <a class="navlink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+        <a class="navlink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+      </nav>
+      <div class="topbar__right">
+        <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
+          <button type="button" data-lang="ru" lang="ru">RU</button>
+          <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+          <button type="button" data-lang="en" lang="en">EN</button>
+        </div>
+        <button class="btn btn--glass btn--arrow topbar__login" type="button" data-nav="login"><span data-i18n="nav.login"></span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="menubtn" type="button" id="menu-btn" aria-expanded="false" aria-controls="mobile-nav" data-i18n-attr="aria-label:nav.menu"><i></i><i></i><i></i></button>
+      </div>
+    </div>
+    <nav class="mobilenav" id="mobile-nav" hidden data-i18n-attr="aria-label:nav.label">
+      <a class="navlink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+      <a class="navlink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+      <a class="navlink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+      <a class="navlink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+    </nav>
+  </header>
+
+  <main id="app">
+
+    <!-- ===================== LANDING ===================== -->
+    <div class="view view--welcome" data-view="welcome">
+
+      <!-- Continuous Green Flow: тонкая лента через всю страницу (строится в JS), под текстом приглушается маской -->
+      <svg class="flow" id="flow" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="flow-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#4fb84f" stop-opacity=".0"/>
+            <stop offset=".25" stop-color="#4fb84f" stop-opacity=".85"/>
+            <stop offset="1" stop-color="#045333" stop-opacity=".85"/>
+          </linearGradient>
+        </defs>
+        <g>
+          <path class="flow__ghost" id="flow-ghost"/>
+          <path class="flow__band" id="flow-band"/>
+          <path class="flow__line" id="flow-line"/>
+        </g>
+      </svg>
+
+      <!-- Общий декоративный слой: ленты и свет проходят через всю страницу (fixed, параллакс по прокрутке) -->
+      <div class="ribbons" id="ribbons" aria-hidden="true">
+        <i class="glow glow--a"></i><i class="glow glow--b"></i>
+        <svg class="rb rb--back" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs>
+            <linearGradient id="rbA" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".35" stop-color="#4fb84f" stop-opacity=".34"/><stop offset=".72" stop-color="#7fd77f" stop-opacity=".2"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="rbB" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#9fe19f" stop-opacity=".2"/></linearGradient>
+          </defs>
+          <path d="M-120 640C260 470 640 720 1020 540S1520 380 1600 340V520C1380 590 1180 760 880 840S280 880-120 860Z" fill="url(#rbA)"/>
+          <path d="M620 -40C900 150 1240 40 1540 230V-40Z" fill="url(#rbB)"/>
+        </svg>
+        <svg class="rb rb--mid" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs>
+            <linearGradient id="rbC" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset=".3" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".6" stop-color="#6fcf6f" stop-opacity=".26"/><stop offset="1" stop-color="#4fb84f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="rbE" x1="0" x2="1"><stop offset="0" stop-color="#045333" stop-opacity="0"/><stop offset=".5" stop-color="#045333" stop-opacity=".09"/><stop offset="1" stop-color="#4fb84f" stop-opacity=".2"/></linearGradient>
+          </defs>
+          <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90V210C1320 240 1000 400 700 360S200 340-120 330Z" fill="url(#rbC)"/>
+          <path d="M-100 770C300 690 700 890 1100 750S1500 690 1580 710V800C1300 850 900 930 560 880S100 820-100 850Z" fill="url(#rbE)"/>
+        </svg>
+        <svg class="rb rb--front" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <defs><linearGradient id="rbD" x1="0" x2="1"><stop offset="0" stop-color="#4fb84f" stop-opacity="0"/><stop offset=".4" stop-color="#4fb84f" stop-opacity=".7"/><stop offset="1" stop-color="#045333" stop-opacity="0"/></linearGradient></defs>
+          <path d="M-60 520C300 360 700 640 1060 440S1500 300 1520 280" fill="none" stroke="url(#rbD)" stroke-width="1.6"/>
+          <path d="M-60 560C320 410 700 690 1060 490S1480 350 1520 330" fill="none" stroke="url(#rbD)" stroke-width="1" opacity=".5"/>
+          <path d="M-120 200C240 60 560 300 940 170S1420 40 1580 90" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.2"/>
+        </svg>
+      </div>
+
+      <!-- 1. Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+
+        <div class="hero__main">
+          <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+
+          <!-- 3D-гарнитура: подготовленный прозрачный WebP (assets/headset.webp), параллакс от курсора -->
+          <div class="hero__headset">
+            <div class="hs3d" id="hs3d"><div class="hs3d__sway">
+              <picture><source type="image/webp" srcset="assets/headset.webp"><img class="hs3d__img" src="assets/headset.png" width="720" height="648" alt="" data-i18n-attr="alt:hero.headset" draggable="false" decoding="async" fetchpriority="high"></picture>
+            </div></div>
+            <span class="hs3d__shadow" aria-hidden="true"></span>
+          </div>
+
+          <div class="hero__center">
+            <img class="hero__logo" src="assets/freedom-logo.png" alt="" width="116" height="134">
+            <h1 class="hero__title" id="hero-title" data-fisheye>Freedom</h1>
+            <p class="hero__subtitle">CQA Insight</p>
+            <p class="hero__desc" data-i18n="hero.desc"></p>
+            <button class="btn btn--lg btn--arrow btn--glass" type="button" id="start-btn" data-nav="login">
+              <span data-i18n="hero.cta"></span>
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </button>
+          </div>
+
+          <!-- Правая 3D AI-плашка: подготовленное изображение (assets/ai-panel.webp, PNG fallback), лёгкий floating -->
+          <div class="hero__panel floaty floaty--b" aria-hidden="true">
+            <div class="aitilt" id="aitilt"><picture><source type="image/webp" srcset="assets/ai-panel.webp"><img class="aipanel" src="assets/ai-panel.png" width="640" height="470" alt="" draggable="false" decoding="async" fetchpriority="high"></picture></div>
+          </div>
+        </div>
+
+        <ul class="pills">
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-headset"/></svg><div><b data-i18n="pills.p1.title"></b><span data-i18n="pills.p1.text"></span></div></li>
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-bars"/></svg><div><b data-i18n="pills.p2.title"></b><span data-i18n="pills.p2.text"></span></div></li>
+          <li class="glass"><svg class="ico" aria-hidden="true"><use href="#i-sparkle"/></svg><div><b data-i18n="pills.p3.title"></b><span data-i18n="pills.p3.text"></span></div></li>
+        </ul>
+
+      </section>
+
+      <!-- 2. About -->
+      <section class="section about" id="about" aria-labelledby="about-title">
+        <div class="container about__grid">
+          <div class="about__text">
+            <p class="eyebrow reveal" data-i18n="about.eyebrow"></p>
+            <h2 class="display reveal" id="about-title"><span data-i18n="about.title"></span> <em data-i18n="about.titleAccent"></em></h2>
+            <p class="lead reveal" data-i18n="about.p1"></p>
+            <ul class="ticks reveal">
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c1"></span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c2"></span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-check-circle"/></svg><span data-i18n="about.c3"></span></li>
+            </ul>
+          </div>
+
+          <!-- Карточка аудиодиалога: чисто визуальная демонстрация, звук не воспроизводится -->
+          <div class="audio glass reveal" id="audio-card">
+            <div class="audio__badge floaty floaty--c">
+              <svg class="ico ico--solid" aria-hidden="true"><use href="#i-check"/></svg>
+              <div><b data-i18n="about.audio.badge"></b><span>AI</span></div>
+            </div>
+            <div class="audio__head"><span class="tag" data-i18n="common.demo"></span><span class="aistat" id="audio-ai" hidden><i></i><span id="audio-ai-text"></span></span></div>
+            <div class="audio__player">
+              <button class="audio__btn" type="button" id="audio-btn" aria-pressed="false" data-i18n-attr="aria-label:about.audio.play">
+                <svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>
+              </button>
+              <div class="audio__wave" id="audio-wave" aria-hidden="true"></div>
+            </div>
+            <div class="audio__progress" aria-hidden="true"><i id="audio-bar"></i></div>
+            <div class="audio__time" aria-hidden="true"><span id="audio-now">0:00</span><span>/ 2:14</span></div>
+            <div class="audio__result">
+              <h3 data-i18n="about.audio.result"></h3>
+              <ul>
+                <li><span data-i18n="features.checklist.i1"></span><b class="ok">✓</b></li>
+                <li><span data-i18n="features.checklist.i2"></span><b class="ok">✓</b></li>
+                <li><span data-i18n="features.checklist.i3"></span><b class="ok">✓</b></li>
+              </ul>
+              <p class="audio__score"><span data-i18n="about.audio.total"></span><strong>92<small>/100</small></strong></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. How it works -->
+      <section class="section how" id="how" aria-labelledby="how-title">
+        <div class="container how__grid">
+          <div class="how__head">
+            <p class="eyebrow reveal" data-i18n="how.eyebrow"></p>
+            <h2 class="h2 reveal" id="how-title"><span data-i18n="how.title"></span> <em data-i18n="how.titleAccent"></em></h2>
+          </div>
+          <ol class="steps">
+            <li class="step glass reveal" tabindex="0" style="--i:0">
+              <span class="step__num">01</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-folder"/></svg>
+              <h3 data-i18n="how.s1.title"></h3>
+              <p data-i18n="how.s1.text"></p>
+              <div class="viz viz--files" aria-hidden="true"><span><svg class="ico"><use href="#i-file"/></svg>call_0412</span><span><svg class="ico"><use href="#i-file"/></svg>chat_0388</span><span class="viz__bar"><i></i></span></div>
+            </li>
+            <li class="step glass reveal" tabindex="0" style="--i:1">
+              <span class="step__num">02</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-cpu"/></svg>
+              <h3 data-i18n="how.s2.title"></h3>
+              <p data-i18n="how.s2.text"></p>
+              <div class="viz viz--scan" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            </li>
+            <li class="step glass reveal" tabindex="0" style="--i:2">
+              <span class="step__num">03</span>
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-trend"/></svg>
+              <h3 data-i18n="how.s3.title"></h3>
+              <p data-i18n="how.s3.text"></p>
+              <div class="viz viz--result" aria-hidden="true"><strong>92</strong><span lang="ru">«…вернусь сегодня до 18:00»</span></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 4. Features (bento) -->
+      <section class="section features" id="features" aria-labelledby="feat-title">
+        <div class="container">
+          <p class="eyebrow reveal" data-i18n="features.eyebrow"></p>
+          <h2 class="h2 reveal" id="feat-title"><span data-i18n="features.title"></span> <em data-i18n="features.titleAccent"></em></h2>
+
+          <div class="bento">
+            <article class="bcard bcard--ai glass reveal" style="--i:0">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-bolt"/></svg>
+              <div class="bcard__txt">
+                <h3 data-i18n="features.ai.title"></h3>
+                <p data-i18n="features.ai.text"></p>
+              </div>
+              <div class="ring" aria-hidden="true">
+                <svg viewBox="0 0 120 120"><circle class="ring__bg" cx="60" cy="60" r="50"/><circle class="ring__fg" cx="60" cy="60" r="50" pathLength="100"/></svg>
+                <strong>92<small>/100</small></strong>
+              </div>
+            </article>
+
+            <article class="bcard bcard--multi glass reveal" style="--i:1">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-globe"/></svg>
+              <h3 data-i18n="features.multi.title"></h3>
+              <p data-i18n="features.multi.text"></p>
+              <div class="chips" aria-hidden="true"><b>RU</b><b>ҚАЗ</b><b>EN</b></div>
+            </article>
+
+            <article class="bcard bcard--evidence glass reveal" style="--i:2">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-quote"/></svg>
+              <h3 data-i18n="features.evidence.title"></h3>
+              <!-- Фрагмент диалога на языке оригинала: не локализуется -->
+              <blockquote class="quote" lang="ru">«Я проверю ваш вопрос и вернусь <mark>сегодня до 18:00</mark>.»</blockquote>
+              <span class="tag tag--accent" data-i18n="features.evidence.tag"></span>
+            </article>
+
+            <article class="bcard bcard--ops glass reveal" style="--i:3">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-bars"/></svg>
+              <h3 data-i18n="features.operator.title"></h3>
+              <p data-i18n="features.operator.text"></p>
+              <div class="minibars" aria-hidden="true"><i style="--h:34%"></i><i style="--h:52%"></i><i style="--h:46%"></i><i style="--h:70%"></i><i style="--h:88%"></i></div>
+            </article>
+
+            <article class="bcard bcard--appeals glass reveal" style="--i:4">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-layers"/></svg>
+              <h3 data-i18n="features.appeals.title"></h3>
+              <p data-i18n="features.appeals.text"></p>
+              <ol class="stepper">
+                <li class="is-done"><span><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><em data-i18n="features.appeals.filed"></em></li>
+                <li class="is-now"><span><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg></span><em data-i18n="features.appeals.review"></em></li>
+                <li><span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></span><em data-i18n="features.appeals.decided"></em></li>
+              </ol>
+            </article>
+
+            <article class="bcard bcard--check glass reveal" style="--i:5">
+              <svg class="ico ico--lg" aria-hidden="true"><use href="#i-check-square"/></svg>
+              <h3 data-i18n="features.checklist.title"></h3>
+              <p data-i18n="features.checklist.text"></p>
+              <ul class="critlist">
+                <li><button type="button" role="checkbox" aria-checked="true"><span class="box"></span><span data-i18n="features.checklist.i1"></span></button></li>
+                <li><button type="button" role="checkbox" aria-checked="true"><span class="box"></span><span data-i18n="features.checklist.i2"></span></button></li>
+                <li><button type="button" role="checkbox" aria-checked="false"><span class="box"></span><span data-i18n="features.checklist.i3"></span></button></li>
+              </ul>
+              <span class="addcrit"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="features.checklist.add"></span></span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Analytics preview -->
+      <section class="section preview" id="preview-section" aria-labelledby="prev-title">
+        <div class="container preview__grid">
+          <div class="preview__text">
+            <p class="eyebrow reveal" data-i18n="preview.eyebrow"></p>
+            <h2 class="h2 reveal" id="prev-title"><span data-i18n="preview.title"></span> <em data-i18n="preview.titleAccent"></em></h2>
+            <p class="lead reveal" data-i18n="preview.text"></p>
+            <p class="demo-note reveal"><span class="tag tag--accent" data-i18n="common.demo"></span> <span data-i18n="preview.demoNote"></span></p>
+          </div>
+
+          <div class="appwin reveal" id="preview">
+            <div class="appwin__bar">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="appwin__title">CQA Insight</span>
+              <span class="tag tag--accent" id="preview-demo" data-i18n="common.demo"></span>
+            </div>
+            <div class="appwin__body">
+              <nav class="side" aria-hidden="true">
+                <span class="is-on"><svg class="ico"><use href="#i-home"/></svg></span>
+                <span><svg class="ico"><use href="#i-bars"/></svg></span>
+                <span><svg class="ico"><use href="#i-users"/></svg></span>
+                <span><svg class="ico"><use href="#i-chat"/></svg></span>
+                <span><svg class="ico"><use href="#i-settings"/></svg></span>
+              </nav>
+              <div class="appmain">
+                <div class="kpis">
+                  <div class="kpi"><span data-i18n="preview.avg"></span><strong id="kpi-avg"></strong><em class="delta" id="kpi-delta"></em></div>
+                  <div class="kpi"><span data-i18n="preview.checked"></span><strong id="kpi-checked"></strong></div>
+                  <div class="kpi"><span data-i18n="preview.appeals"></span><strong id="kpi-appeals"></strong></div>
+                </div>
+                <div class="mid">
+                  <div class="pcard pcard--chart">
+                    <h3 data-i18n="preview.chart"></h3>
+                    <svg class="chart" id="chart" viewBox="0 0 600 200" role="img" data-i18n-attr="aria-label:preview.chart"></svg>
+                  </div>
+                  <div class="pcard pcard--status">
+                    <h3 data-i18n="preview.statuses"></h3>
+                    <ul class="statuses" id="statuses"></ul>
+                  </div>
+                </div>
+                <div class="pcard pcard--table">
+                  <h3 data-i18n="preview.table"></h3>
+                  <div class="tablewrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th data-i18n="preview.col.id"></th>
+                          <th class="hide-sm" data-i18n="preview.col.operator"></th>
+                          <th class="hide-sm" data-i18n="preview.col.lang"></th>
+                          <th data-i18n="preview.col.score"></th>
+                          <th data-i18n="preview.col.status"></th>
+                          <th class="hide-sm" data-i18n="preview.col.date"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="dialog-rows"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Final CTA + footer -->
+      <section class="section cta" aria-labelledby="cta-title">
+        <svg class="cta__arc" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path class="arc arc--a" d="M-40 300 C 320 40, 1080 40, 1480 300"/>
+          <path class="arc arc--b" d="M-40 330 C 360 90, 1040 90, 1480 330"/>
+        </svg>
+        <div class="container cta__box reveal">
+          <h2 class="h2" id="cta-title"><span data-i18n="cta.title"></span> <em data-i18n="cta.titleAccent"></em></h2>
+          <p class="lead" data-i18n="cta.text"></p>
+          <button class="btn btn--lg btn--light btn--arrow" type="button" id="cta-btn" data-nav="login">
+            <span data-i18n="cta.button"></span>
+            <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="fwave" aria-hidden="true"><div class="fwave__track"><svg viewBox="0 0 1200 60" preserveAspectRatio="none" focusable="false"><path d="M5 25.0V35.0M15 21.2V38.8M25 21.3V38.7M35 20.7V39.3M45 22.6V37.4M55 24.6V35.4M65 23.5V36.5M75 23.2V36.8M85 24.0V36.0M95 23.5V36.5M105 18.6V41.4M115 14.3V45.7M125 13.8V46.2M135 6.9V53.1M145 8.5V51.5M155 13.6V46.4M165 17.3V42.7M175 24.9V35.1M185 17.4V42.6M195 12.6V47.4M205 5.3V54.7M215 5.1V54.9M225 5.5V54.5M235 11.0V49.0M245 17.4V42.6M255 22.4V37.6M265 22.1V37.9M275 19.4V40.6M285 16.9V43.1M295 15.8V44.2M305 15.5V44.5M315 19.3V40.7M325 22.7V37.3M335 24.5V35.5M345 25.0V35.0M355 24.0V36.0M365 21.0V39.0M375 17.6V42.4M385 16.2V43.8M395 13.5V46.5M405 14.7V45.3M415 16.4V43.6M425 22.4V37.6M435 22.0V38.0M445 14.5V45.5M455 8.0V52.0M465 8.1V51.9M475 5.3V54.7M485 10.1V49.9M495 14.1V45.9M505 18.9V41.1M515 24.7V35.3M525 17.3V42.7M535 13.1V46.9M545 11.4V48.6M555 8.5V51.5M565 13.0V47.0M575 17.4V42.6M585 20.8V39.2M595 24.0V36.0M605 24.1V35.9M615 23.7V36.3M625 24.4V35.6M635 23.8V36.2M645 22.0V38.0M655 20.8V39.2M665 19.7V40.3M675 22.1V37.9M685 24.7V35.3M695 20.2V39.8M705 15.3V44.7M715 10.3V49.7M725 10.1V49.9M735 11.1V48.9M745 12.1V47.9M755 14.8V45.2M765 22.4V37.6M775 20.4V39.6M785 15.6V44.4M795 12.4V47.6M805 5.4V54.6M815 8.1V51.9M825 13.1V46.9M835 16.1V43.9M845 21.3V38.7M855 24.6V35.4M865 21.1V38.9M875 19.6V40.4M885 19.5V40.5M895 20.2V39.8M905 23.0V37.0M915 24.8V35.2M925 23.8V36.2M935 24.3V35.7M945 23.3V36.7M955 19.6V40.4M965 14.7V45.3M975 14.8V45.2M985 13.7V46.3M995 11.5V48.5M1005 15.3V44.7M1015 18.2V41.8M1025 24.4V35.6M1035 18.4V41.6M1045 11.2V48.8M1055 3.9V56.1M1065 6.6V53.4M1075 6.0V54.0M1085 9.1V50.9M1095 14.5V45.5M1105 22.9V37.1M1115 21.2V38.8M1125 18.4V41.6M1135 16.5V43.5M1145 14.2V45.8M1155 16.0V44.0M1165 18.7V41.3M1175 21.1V38.9M1185 24.1V35.9M1195 24.9V35.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><svg viewBox="0 0 1200 60" preserveAspectRatio="none" focusable="false"><path d="M5 25.0V35.0M15 21.2V38.8M25 21.3V38.7M35 20.7V39.3M45 22.6V37.4M55 24.6V35.4M65 23.5V36.5M75 23.2V36.8M85 24.0V36.0M95 23.5V36.5M105 18.6V41.4M115 14.3V45.7M125 13.8V46.2M135 6.9V53.1M145 8.5V51.5M155 13.6V46.4M165 17.3V42.7M175 24.9V35.1M185 17.4V42.6M195 12.6V47.4M205 5.3V54.7M215 5.1V54.9M225 5.5V54.5M235 11.0V49.0M245 17.4V42.6M255 22.4V37.6M265 22.1V37.9M275 19.4V40.6M285 16.9V43.1M295 15.8V44.2M305 15.5V44.5M315 19.3V40.7M325 22.7V37.3M335 24.5V35.5M345 25.0V35.0M355 24.0V36.0M365 21.0V39.0M375 17.6V42.4M385 16.2V43.8M395 13.5V46.5M405 14.7V45.3M415 16.4V43.6M425 22.4V37.6M435 22.0V38.0M445 14.5V45.5M455 8.0V52.0M465 8.1V51.9M475 5.3V54.7M485 10.1V49.9M495 14.1V45.9M505 18.9V41.1M515 24.7V35.3M525 17.3V42.7M535 13.1V46.9M545 11.4V48.6M555 8.5V51.5M565 13.0V47.0M575 17.4V42.6M585 20.8V39.2M595 24.0V36.0M605 24.1V35.9M615 23.7V36.3M625 24.4V35.6M635 23.8V36.2M645 22.0V38.0M655 20.8V39.2M665 19.7V40.3M675 22.1V37.9M685 24.7V35.3M695 20.2V39.8M705 15.3V44.7M715 10.3V49.7M725 10.1V49.9M735 11.1V48.9M745 12.1V47.9M755 14.8V45.2M765 22.4V37.6M775 20.4V39.6M785 15.6V44.4M795 12.4V47.6M805 5.4V54.6M815 8.1V51.9M825 13.1V46.9M835 16.1V43.9M845 21.3V38.7M855 24.6V35.4M865 21.1V38.9M875 19.6V40.4M885 19.5V40.5M895 20.2V39.8M905 23.0V37.0M915 24.8V35.2M925 23.8V36.2M935 24.3V35.7M945 23.3V36.7M955 19.6V40.4M965 14.7V45.3M975 14.8V45.2M985 13.7V46.3M995 11.5V48.5M1005 15.3V44.7M1015 18.2V41.8M1025 24.4V35.6M1035 18.4V41.6M1045 11.2V48.8M1055 3.9V56.1M1065 6.6V53.4M1075 6.0V54.0M1085 9.1V50.9M1095 14.5V45.5M1105 22.9V37.1M1115 21.2V38.8M1125 18.4V41.6M1135 16.5V43.5M1145 14.2V45.8M1155 16.0V44.0M1165 18.7V41.3M1175 21.1V38.9M1185 24.1V35.9M1195 24.9V35.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div>
+        <div class="container footer__grid">
+          <div class="footer__brand">
+            <div class="footer__logo"><img src="assets/freedom-logo.png" alt="" width="30" height="35"><span>Freedom</span></div>
+            <strong>CQA Insight</strong>
+            <p data-i18n="footer.desc"></p>
+          </div>
+          <nav class="footer__nav" data-i18n-attr="aria-label:nav.label">
+          <a class="flink" href="#/welcome" data-scroll="about" data-i18n="nav.about"></a>
+          <a class="flink" href="#/welcome" data-scroll="how" data-i18n="nav.how"></a>
+          <a class="flink" href="#/welcome" data-scroll="features" data-i18n="nav.features"></a>
+          <a class="flink" href="#/welcome" data-scroll="analytics" data-i18n="nav.analytics"></a>
+          </nav>
+          <div class="footer__side">
+            <div class="langswitch langswitch--dark" role="group" data-i18n-attr="aria-label:common.langLabel">
+              <button type="button" data-lang="ru" lang="ru">RU</button>
+              <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+              <button type="button" data-lang="en" lang="en">EN</button>
+            </div>
+            <button class="btn btn--glassdark btn--arrow" type="button" data-nav="login">
+              <span data-i18n="hero.cta"></span>
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </button>
+            <small data-i18n="footer.text"></small>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- ===================== LOGIN ===================== -->
+    <div class="view view--login" data-view="login" hidden>
+      <form class="card login" id="login-form" novalidate aria-labelledby="login-title">
+        <h2 id="login-title" data-i18n="login.title"></h2>
+        <p class="demo-note" data-i18n="login.demo"></p>
+        <label class="field">
+          <span data-i18n="login.email"></span>
+          <input id="login-email" name="email" type="email" autocomplete="username" required data-i18n-attr="placeholder:login.emailPlaceholder">
+        </label>
+        <label class="field">
+          <span data-i18n="login.password"></span>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="form-error" id="login-error" role="alert" hidden data-i18n="login.error"></p>
+        <button class="btn" type="submit" data-i18n="login.submit"></button>
+        <a class="link" href="#/welcome" data-i18n="login.back"></a>
+      </form>
+    </div>
+
+    <!-- ===================== WORKSPACE (внутренняя система проверяющего) ===================== -->
+    <div class="view view--dashboard ws" id="ws" data-view="dashboard" hidden>
+      <button class="ws-skip" type="button" id="ws-skip" data-i18n="ws.skip"></button>
+      <aside class="ws-side" id="ws-side">
+        <div class="ws-side__head">
+          <a class="ws-brand" href="#/dashboard"><img src="assets/freedom-logo.png" alt="" width="28" height="32"><span class="ws-brand__t"><b>Freedom</b><small>CQA Insight</small></span></a>
+          <button class="iconbtn ws-close" type="button" id="ws-close" data-i18n-attr="aria-label:ws.side.close"><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg></button>
+        </div>
+        <nav class="ws-nav" data-i18n-attr="aria-label:ws.nav.label">
+        <a class="ws-nav__link" href="#/dashboard" data-section="overview" data-i18n-attr="title:ws.nav.overview">
+          <svg class="ico" aria-hidden="true"><use href="#i-home"/></svg><span class="ws-nav__t" data-i18n="ws.nav.overview"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/conversations" data-section="conversations" data-i18n-attr="title:ws.nav.conversations">
+          <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg><span class="ws-nav__t" data-i18n="ws.nav.conversations"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/evaluations" data-section="evaluations" data-i18n-attr="title:ws.nav.evaluations">
+          <svg class="ico" aria-hidden="true"><use href="#i-check-square"/></svg><span class="ws-nav__t" data-i18n="ws.nav.evaluations"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/operators" data-section="operators" data-i18n-attr="title:ws.nav.operators">
+          <svg class="ico" aria-hidden="true"><use href="#i-users"/></svg><span class="ws-nav__t" data-i18n="ws.nav.operators"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/appeals" data-section="appeals" data-i18n-attr="title:ws.nav.appeals">
+          <svg class="ico" aria-hidden="true"><use href="#i-quote"/></svg><span class="ws-nav__t" data-i18n="ws.nav.appeals"></span>
+        </a>
+        <a class="ws-nav__link" href="#/dashboard/checklist" data-section="checklist" data-i18n-attr="title:ws.nav.checklist">
+          <svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span class="ws-nav__t" data-i18n="ws.nav.checklist"></span>
+        </a>
+        </nav>
+        <button class="ws-collapse" type="button" id="ws-collapse" aria-expanded="true"><svg class="ico" aria-hidden="true"><use href="#i-chevrons-left"/></svg><span id="ws-collapse-t"></span></button>
+      </aside>
+      <div class="toasts" id="ws-toasts" aria-live="polite"></div>
+  <div class="ws-scrim" id="ws-scrim" hidden></div>
+      <div class="ws-body">
+        <header class="ws-top">
+          <button class="iconbtn ws-burger" type="button" id="ws-burger" aria-expanded="false" aria-controls="ws-side" data-i18n-attr="aria-label:ws.side.open"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
+          <h1 class="ws-top__title" id="dash-title" tabindex="-1"></h1>
+          <label class="ws-search"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="ws-search" type="search" autocomplete="off"></label>
+          <div class="ws-top__right">
+            <button class="ws-mode" type="button" id="ws-mode" data-mode="demo"><i aria-hidden="true"></i><span id="ws-mode-text"></span></button>
+            <div class="langswitch" role="group" data-i18n-attr="aria-label:common.langLabel">
+              <button type="button" data-lang="ru" lang="ru">RU</button>
+              <button type="button" data-lang="kk" lang="kk">ҚАЗ</button>
+              <button type="button" data-lang="en" lang="en">EN</button>
+            </div>
+            <div class="ws-user">
+              <button class="ws-user__btn" type="button" id="ws-user-btn" aria-haspopup="true" aria-expanded="false" aria-controls="ws-menu" data-i18n-attr="aria-label:ws.top.menu">
+                <span class="ws-avatar" id="ws-avatar" aria-hidden="true"></span><span class="ws-user__name" data-i18n="ws.top.user"></span>
+              </button>
+              <div class="ws-menu" id="ws-menu" hidden>
+                <div class="ws-menu__who"><b data-i18n="ws.top.role"></b><span id="ws-email"></span></div>
+                <button class="ws-menu__item" type="button" id="logout-btn"><svg class="ico" aria-hidden="true"><use href="#i-logout"/></svg><span data-i18n="ws.top.logout"></span></button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="ws-main" id="ws-main"></div>
+      </div>
+    </div>
+
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

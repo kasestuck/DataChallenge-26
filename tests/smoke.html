@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMOKE …</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #0b1f16; background: #f6fbf8; }
+    table { border-collapse: collapse; width: 100%; background: #fff; } th, td { padding: 6px 10px; border-bottom: 1px solid #dbe8e0; text-align: left; vertical-align: top; }
+    tr.ok td:nth-child(3) { color: #1c7a3a; font-weight: 700; } tr.bad td { background: #fde8e6; color: #b3261e; }
+    iframe { display: block; height: 700px; width: 1280px; max-width: 100%; border: 1px solid #dbe8e0; background: #fff; margin-top: 16px; }
+    p { max-width: 90ch; }
+  </style>
+</head>
+<body>
+  <h1>CQA Workspace — smoke-тесты</h1>
+  <p>Mock Mode, Backend не нужен. Запуск: статический сервер из корня проекта, затем открыть <code>/tests/smoke.html</code>. Идёт прогон…</p>
+  <div id="out"></div>
+  <iframe id="app" title="Workspace under test"></iframe>
+  <script type="module" src="./smoke.js"></script>
+</body>
+</html>
