@@ -107,7 +107,7 @@ body.ws-lock { overflow: hidden; }
 .wk-delta--up { background: var(--c-ok-bg); color: #1c7a3a; }
 .wk-delta--down { background: #fde8e6; color: var(--c-error); }
 
-.ov__grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "trend trend dist" "conv conv lang" "conv conv appeals"; align-items: start; }
+.ov__grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "trend trend dist" "trend trend lang" "conv conv appeals"; align-items: start; }
 .panel { min-width: 0; padding: 20px; background: #fff; border: 1px solid var(--c-line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
 .panel--trend { grid-area: trend; } .panel--dist { grid-area: dist; } .panel--conv { grid-area: conv; } .panel--lang { grid-area: lang; } .panel--appeals { grid-area: appeals; }
 .panel h2 { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 800; color: var(--c-ink); }
