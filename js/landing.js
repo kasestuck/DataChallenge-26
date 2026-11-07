@@ -369,7 +369,6 @@ export function initLanding() {
 
   // чек-лист: мини-редактор критериев
   $$('.critlist button').forEach((b) => b.addEventListener('click', () => b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true'))));
-  $('#scroll-hint').addEventListener('click', () => $('#about').scrollIntoView({ behavior: reduceMq.matches ? 'auto' : 'smooth' }));
   reduceMq.addEventListener('change', flow.update);
   document.addEventListener('visibilitychange', () => { if (document.hidden) resetTilt(); });
 
