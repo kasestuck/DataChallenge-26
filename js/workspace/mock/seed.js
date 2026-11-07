@@ -170,7 +170,8 @@ export function buildStore() {
       const dip = rand() < 0.1 ? rand() * 38 : 0;
       const q = clamp(base + (rand() - 0.5) * 30 - dip, 18, 100) / 100;
       const r = rand();
-      const at = new Date(day.getTime() + (8 + Math.floor(rand() * 11)) * 3600000 + Math.floor(rand() * 60) * 60000);
+      let at = new Date(day.getTime() + (8 + Math.floor(rand() * 11)) * 3600000 + Math.floor(rand() * 60) * 60000);
+      if (at.getTime() > Date.now() - 20 * 60000) at = new Date(Date.now() - (30 + Math.floor(rand() * 300)) * 60000);   // диалоги не из будущего
       const id = `DEMO-${++n}`;
       const conv = {
         id, language: r < 0.5 ? 'ru' : r < 0.82 ? 'kk' : 'en', channel: rand() < 0.55 ? 'call' : 'chat',

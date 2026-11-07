@@ -433,3 +433,25 @@ em.muted { font-style: normal; }
 [data-newscore][hidden] { display: none; }
 .form-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .field textarea:focus-visible, .field input:focus-visible, .field select:focus-visible { outline: 3px solid var(--c-green-dark); outline-offset: 2px; }
+
+/* ---------- Конструктор чек-листов ---------- */
+.cl__bar { margin-bottom: 14px; }
+.pill--custom { background: var(--c-warn-bg); color: var(--c-warn); }
+.ce-wrap { display: grid; gap: 14px; }
+.ce { margin: 0; padding: 14px 16px 12px; border: 1px solid var(--c-line); border-radius: 14px; background: #fff; box-shadow: var(--sh-1); min-width: 0; }
+.ce legend { padding: 0 8px; font-size: 13px; font-weight: 800; color: var(--c-green-dark); }
+.ce .field { margin-top: 10px; }
+.ce__row { display: flex; flex-wrap: wrap; gap: 0 16px; }
+.ce__row .field { flex: 0 1 auto; }
+.ce .field input[type="text"], .ce .field textarea { width: 100%; }
+.ce .field input:disabled { background: #eef3f0; cursor: not-allowed; }
+.ce__na { margin-top: 12px; width: fit-content; }
+.ce__foot { display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; }
+.ce__foot .btn .ico { width: 16px; height: 16px; margin-right: 6px; }
+.ce__add { display: flex; }
+.sumbar { display: grid; gap: 6px; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; }
+.sumbar i { display: block; height: 8px; border-radius: 999px; background: rgba(0, 0, 0, .08); overflow: hidden; } .sumbar i i { height: 100%; background: currentColor; }
+.sumbar--ok { background: var(--c-ok-bg); color: #1c7a3a; } .sumbar--bad { background: #fde8e6; color: var(--c-error); }
+.re-res { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; max-height: 220px; overflow-y: auto; }
+.re--ok { color: #1c7a3a; } .re--bad { color: var(--c-error); }
+@media (max-width: 760px) { .ce__row .field { flex: 1 1 140px; } .ce__row .field input[type="number"] { width: 100%; } }

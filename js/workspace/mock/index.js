@@ -78,7 +78,7 @@ export function conversation(id) {
   return {
     ...convSummary(c),
     messages: messagesOf(c),
-    evaluations: [...st().evalCores.values()].filter((e) => e.conversation_id === id).map((e) => ({ id: e.id, checklist_version: e.checklist_version, status: e.status, total_score: e.total, created_at: e.created_at })),
+    evaluations: [...st().evalCores.values()].filter((e) => e.conversation_id === id).map((e) => { maybeFinish(e); return e; }).map((e) => ({ id: e.id, checklist_version: e.checklist_version, status: e.status, total_score: e.total, created_at: e.created_at })),
   };
 }
 
