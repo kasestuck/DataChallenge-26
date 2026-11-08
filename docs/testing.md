@@ -5,6 +5,41 @@
 `document.title` и `window.__SMOKE__`, `window.__ADAPTERS__` или `window.__E2E__`.
 Node нужен только для отдельного теста адаптера, не для запуска приложения.
 
+## Проверка объединённого приложения — 08.11.2026
+
+Проверено на Windows; Node v24.22.1. Подробности общей проверки — в
+[протоколе от 08.11.2026](verification-2026-11-08.md).
+
+| Проверка | Фактический результат | Границы проверки |
+| --- | --- | --- |
+| `.\.venv\Scripts\python.exe -B -X utf8 -m pytest -q -p no:cacheprovider` | **595 passed**, 1 warning, 63.66 с | Временные БД; LLM подменяется только в тестах. Предупреждение — Starlette/httpx deprecation |
+| `node tests/contract_adapter_node.mjs` | **10 passed**, 0 failed, 0 skipped, 82.834 мс | Синтетические HTTP-ответы; без сети, модели и записи БД |
+| Словари RU / KK / EN, команда ниже | **489 строковых ключей в каждом языке**; отсутствующих/лишних ключей и расхождений плейсхолдеров — 0 | Структурная проверка; не лингвистическая экспертиза и не браузерный E2E |
+| Реальный Uvicorn с временной БД на свободном порту | `/`, `/api/health`, `/docs`, `/openapi.json` → **200**; `/.env`, `/data/cqa.db` → **404** | Проверены запуск, разрешённая статика и HTTP API; основная БД не использовалась |
+| CORS | Разрешённый тестовый origin подтверждён | Не заменяет контроль доступа |
+
+Новых платных вызовов модели и нового браузерного E2E в этой проверке не было.
+Результаты браузерных сценариев от 07.11.2026 ниже сохранены отдельно как история.
+
+### Воспроизведение структурной проверки локализации
+
+PowerShell, из корня проекта; команда импортирует только локальные словари:
+
+```powershell
+@'
+const langs = ['ru','kk','en'];
+const dicts = Object.fromEntries(await Promise.all(langs.map(async l => [l,(await import(`./src/i18n/${l}.js`)).default])));
+const flat=(o,p='')=>Object.fromEntries(Object.entries(o).flatMap(([k,v])=>v && typeof v==='object'? Object.entries(flat(v,`${p}${k}.`)):[[`${p}${k}`,v]]));
+const rows=Object.fromEntries(langs.map(l=>[l,flat(dicts[l])]));
+const base=Object.keys(rows.ru);
+const names=v=>[...String(v).matchAll(/\{(\w+)\}/g)].map(x=>x[1]).sort().join(',');
+for (const l of langs) console.log(JSON.stringify({language:l,keys:Object.keys(rows[l]).length,missing:base.filter(k=>!(k in rows[l])),extra:Object.keys(rows[l]).filter(k=>!base.includes(k)),non_strings:Object.entries(rows[l]).filter(([k,v])=>typeof v!=='string').map(([k])=>k),placeholder_mismatches:base.filter(k=>k in rows[l] && names(rows[l][k])!==names(rows.ru[k]))}));
+'@ | node --input-type=module -
+```
+
+Ожидаются три JSON-строки с `keys: 489` и пустыми массивами `missing`, `extra`,
+`non_strings`, `placeholder_mismatches`. Команда ничего не записывает и не вызывает API.
+
 ## Проверки без сервера и модели
 
 Из корня проекта:
@@ -20,7 +55,7 @@ Overview, ошибки без mock-fallback, фильтры, шкалы, исх�
 список более 100 апелляций. Они не вызывают сеть, модель и не записывают БД.
 `pytest` использует тестовые БД и подмену LLM только в тестах.
 
-В текущем изменении подтверждены: `contract_adapter_node.mjs` — **10/10 PASS**;
+В отчёте исправлений контракта от 07.11.2026 подтверждены: `contract_adapter_node.mjs` — **10/10 PASS**;
 существующий `tests/adapters.js` — **47/47 PASS под Node с DOM shim**.
 Второй результат проверяет логику harness, не является браузерной проверкой.
 
