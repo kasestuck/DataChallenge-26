@@ -334,6 +334,9 @@ node tests/contract_adapter_node.mjs
 | AI integration | Meta API, промпты, валидация evidence, аудит вызовов |
 | Testing | Python, Node, браузерные проверки, валидатор сдачи |
 
+panamera-ai | Backend / API, AI integration
+kasestuck | Frontend / UX, Testing
+
 ## Техническая документация
 
 - [Настройка и эксплуатация бэкенда](README_BACKEND.md#настройка-модели-цен-и-лимитов) — модель, цены, лимиты и команды CLI.
